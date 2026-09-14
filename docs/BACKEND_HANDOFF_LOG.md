@@ -368,6 +368,7 @@ The configuration module `netlify/config/env.js` manages 11 variables. All excep
 | `RAZORPAY_KEY_ID` | **YES** | Live Razorpay Key ID (`rzp_live_...`) for creating checkout orders and payment links. |
 | `RAZORPAY_KEY_SECRET` | **YES** | Live Razorpay Key Secret for generating HMAC-SHA256 signatures and verifying order authenticity. |
 | `RAZORPAY_WEBHOOK_SECRET`| **YES** | Secret token configured in Razorpay Webhooks dashboard to authenticate inbound payment event payloads. |
+| `TICKET_TOKEN_SECRET` | **YES** | Dedicated secret for signing/verifying AI ticket verification tokens, kept separate from ADMIN_SECRET so a leak of one doesn't compromise the other. |
 | `OTP_DEV_MODE` | Optional | Set to `'true'` or `'1'` during local testing. Bypasses real WhatsApp/SMS calls and logs OTP codes to the console. Defaults to `false`. **Must never be true in production.** |
 
 ---
@@ -408,3 +409,81 @@ The following capabilities are deliberately out of scope for Phase 1 and will be
   - `netlify/functions/captain-tools.js`: Enables designated circle captains to set meeting spots and broadcast announcements.
   - `netlify/functions/chat-close-cron.js`: Nightly 1:00 AM IST cron job archiving ephemeral circle chats and dispatching the official closing message.
   - `netlify/functions/showups.js`: Real-time organizer dashboard for scanning attendee tickets at venue gates.
+
+---
+
+## Phase 2: Core Business Logic — 2026-09-15
+
+### Plain-English Summary
+
+In this second phase, we implemented the complete core operational logic for SoloSaathi Circle across attendee registration, authentication, AI ticket fraud inspection, group matching algorithms, circle participant lifecycle, organizer analytics, and background scheduling.
+
+1. **Circle Matching Engine (`netlify/shared/matching.js`)**:
+   Implements deterministic Circle ID construction (`{PREFIX}-{2-digit index}` using `CIRCLE_PREFIX`), partition key formatting (`groupstate:...` for live vs `pending:...` for advance), capacity threshold evaluations (`SOFT_MAX_GROUP = 24`), strict gender balancing (`GENDER_CAP = 10` per declared gender in mixed circles, with 'prefer_not_to_say' exempted and all-women circles bypassing the cap), skill-level grouping with adjacent-level fallback rules, and IST operating window checks.
+2. **OTP Dispatch & Anti-Fraud Verification (`netlify/functions/otp/send-otp.js`, `verify-otp.js`)**:
+   - `send-otp.js`: Validates mobile input, generates a 6-digit numeric code with 10-minute expiry, enforces rate limits (max 3 sends per 15 minutes, 30s cooldown between sends), checks for previous brute-force lockouts, and dispatches via WhatsApp Business API with automated SMS fallback.
+   - `verify-otp.js`: Validates submitted codes, sets 30-minute verified session status (`OTP_VERIFIED_TTL_MINUTES = 30`), and implements the strict **5-attempt hard block** (`OTP_MAX_VERIFY_ATTEMPTS = 5`) where exceeding 5 wrong attempts permanently locks the code with NO manual override allowed.
+3. **Live Walk-Up Registration (`netlify/functions/registration/register.js`)**:
+   Operates only on/after October 13, 2026 during festival operating hours (6:30 PM to 1:30 AM IST). Validates 30-minute OTP verification status, accepts either ticket serial OR photo, performs optional Claude Vision OCR and venue mismatch warning, instantly matches attendee to an active Circle respecting the 10-person gender cap and 24-person soft cap, assigns a Circle Captain, and persists the registration record.
+4. **Advance Registration (`netlify/functions/registration/advance-register.js`)**:
+   Allows pre-event registration anytime up until 2 hours before the event's 7:30 PM IST start (5:30 PM IST cutoff). Requires mandatory ticket photo OCR inspection, warns on venue discrepancies, and queues attendees into partitioned pending pools (`db.getPendingPool` / `db.savePendingPool`) for batch grouping.
+5. **Server-Side AI Ticket Inspection (`netlify/functions/ticket-verification/verify-ticket.js`)**:
+   Securely invokes Anthropic Claude Vision server-side (keeping `ANTHROPIC_API_KEY` hidden from clients) to extract city, venue, pass ID, and plausibility check. Issues cryptographic `ticketVerifiedToken` signed with `TICKET_TOKEN_SECRET`, and fuzzy-matches printed tickets against attendee-chosen venues to flag venue mismatches as non-blocking warnings.
+6. **Circle Batch Finalizer (`netlify/functions/circle/finalize-bucket.js`)**:
+   An administrative endpoint protected by `ADMIN_SECRET` converting pending pools into finalized circles, electing the first opted-in captain, updating attendee documents with their circle IDs, and updating group partition counters.
+7. **Circle Participant Lifecycle & Switching (`netlify/functions/circle/circle-actions.js`)**:
+   Provides unified action handling:
+   - `grow`: Opens 1–20 additional spots (`GROW_MIN_SPOTS` to `GROW_MAX_SPOTS`) and unlocks the circle.
+   - `lock`: Locks circle from additional entrants.
+   - `leave`: Removes attendee, frees capacity, and auto-elects replacement captain if the current captain departs.
+   - `transferCaptain`: Reassigns captain role with cancel support.
+   - `showup`: Logs physical venue gate check-ins for venue attendance tracking.
+   - `switchCircle`: Allows attendees to switch groups subject to: max 3 switches per night (`SWITCH_CIRCLE_MAX_PER_NIGHT = 3`), 5-minute initial lock after joining (`SWITCH_CIRCLE_LOCK_MINUTES = 5`), 20-minute cooldown between switches (`SWITCH_CIRCLE_COOLDOWN_MINUTES = 20`), and target circle capacity/gender caps.
+8. **Attendee Portal & Access Tiers (`netlify/functions/circle/find-my-circle.js`)**:
+   Retrieves all registrations for a phone number across past, present, and future festival nights. Enforces access tiers:
+   - **Tonight (Live)**: Full access to Beacon meeting point and WhatsApp group chat link.
+   - **Past Nights**: Read-only pass archive; Beacon and Chat links are strictly withheld after festival closure.
+   - **Upcoming Nights**: Registration pass visible; group chat pending batch finalization.
+9. **Organizer Authentication & Dashboard (`netlify/functions/organizer/admin-auth.js`, `organizer-stats.js`)**:
+   - `admin-auth.js`: Authenticates venue organizers via Venue ID + Password (no browsable venue catalog exposed) and issues 12-hour signed session tokens.
+   - `organizer-stats.js`: Returns venue-scoped aggregate analytics (total registrations, Live vs Advance split, skill breakdown, gender balance, circles formed, average group size, all-women circle count, show-up rate). **Strict server-side whitelist** completely excludes money, attendee names, and phone numbers from the response payload.
+10. **Automated Scheduled Finalization (`netlify/functions/scheduled/auto-finalize.js`)**:
+    Configured with Netlify Scheduled Function cron `@hourly` (`0 * * * *`). Traverses upcoming events and triggers circle formation when an event enters the 48-hour pre-event window (`hoursUntilEvent <= 48`) with viable quorum, or whenever a pool organically reaches a healthy group size (12+ attendees).
+
+---
+
+### Payment is Stubbed
+
+In this phase, payment processing is intentionally decoupled and stubbed:
+- `netlify/functions/registration/register.js` sets `paymentStatus: 'pending'` on every new registration.
+  Look for the exact comment: `// TODO(Phase 3): gate finalization on confirmed payment`.
+- `netlify/functions/registration/advance-register.js` sets `paymentStatus: 'pending'` on every pooled entry.
+  Look for the exact comment: `// TODO(Phase 3): gate finalization on confirmed payment`.
+- In Phase 3, these registration flows will be gated by Razorpay payment confirmation. When an attendee initiates checkout, an order ID is created (`create-order.js`); once Razorpay webhook (`webhook.js`) or client signature verification (`verify-payment.js`) confirms successful receipt of ₹199 or ₹249, `paymentStatus` will be updated to `'paid'`, transitioning the registration from pending to confirmed active matching.
+
+---
+
+### Still Depends on db.js
+
+All functions written in Phase 2 interact with the database exclusively through the 18 interface methods exported by `netlify/shared/db.js`:
+- `getRegistration`, `saveRegistration`, `getRegistrationsByMobile`
+- `getPendingPool`, `savePendingPool`
+- `getGroupState`, `saveGroupState`
+- `getCircleState`, `saveCircleState`
+- `getShowups`, `saveShowups`
+- `getOtpRecord`, `saveOtpRecord`, `getOtpRateLimit`, `saveOtpRateLimit`, `getVerifiedStatus`, `saveVerifiedStatus`
+- `getVenues`
+
+**Reminder for the database teammate**: Until your concrete implementation using `@netlify/blobs` replaces the stub throws in `netlify/shared/db.js`, invoking any of these functions in an integration test or deploy will throw:
+`NOT_IMPLEMENTED: db.js is owned by the database teammate — see docs/BACKEND_HANDOFF_LOG.md for the required contract.`
+
+The business logic in Phase 2 has been written strictly against your contract specifications defined in Phase 1. As soon as your Netlify Blobs storage operations are implemented, the entire Phase 2 business suite will immediately function end-to-end without code changes.
+
+---
+
+### Not Built Yet (Deferred to Phase 3)
+
+The remaining items to be built in Phase 3 are:
+1. `netlify/functions/payments/create-order.js`: Razorpay Orders API order creation handler using `formatPriceForRazorpay` and `getPrice`.
+2. `netlify/functions/payments/verify-payment.js`: Post-payment HMAC-SHA256 signature verification validating `razorpay_payment_id`, `razorpay_order_id`, and `razorpay_signature` against `RAZORPAY_KEY_SECRET`.
+3. `netlify/functions/payments/webhook.js`: Inbound payment gateway webhook listener verifying `RAZORPAY_WEBHOOK_SECRET` for asynchronous payment capture and automated attendee confirmation.
