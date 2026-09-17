@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/kritzvitz05-alt/Solo-Saathi-Cirlce/issues"
   },
-  "homepage": "https://github.com/kritzvitz05-alt/Solo-Saathi-Cirlce#readme"
+  "homepage": "https://github.com/kritzvitz05-alt/Solo-Saathi-Cirlce#readme",
+  "dependencies": {
+    "firebase-admin": "^14.4.0"
+  }
 }
