@@ -13,6 +13,25 @@
  * and data store requirements.
  */
 
+const admin = require('firebase-admin');
+
+if (!admin.apps.length) {
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    } else {
+      console.warn('FIREBASE_SERVICE_ACCOUNT environment variable is missing.');
+    }
+  } catch (error) {
+    console.error('Error initializing Firebase Admin:', error.message);
+  }
+}
+
+const db = admin.apps.length ? admin.firestore() : null;
+
 const NOT_IMPLEMENTED_MSG =
   'NOT_IMPLEMENTED: db.js is owned by the database teammate — see docs/BACKEND_HANDOFF_LOG.md for the required contract.';
 
@@ -224,6 +243,7 @@ async function getVenues() {
 }
 
 module.exports = {
+  db,
   getRegistration,
   saveRegistration,
   getRegistrationsByMobile,

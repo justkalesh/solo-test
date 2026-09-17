@@ -13,10 +13,10 @@ The backend will use the `firebase-admin` Node.js SDK to interact with Firestore
 ## 1. Firebase Setup & Authentication
 
 To interact with Firebase from our Netlify environment:
-1. We will need a Firebase Project created in the Google Cloud/Firebase Console.
-2. A Service Account key will be generated for backend access.
-3. The Service Account credentials will be provided to Netlify via a securely injected environment variable (e.g., `FIREBASE_SERVICE_ACCOUNT_BASE64`).
-4. `netlify/shared/db.js` will initialize `firebase-admin` on cold start.
+1. We have a Firebase Project created (`solosaathi-circle`).
+2. The Service Account JSON has been minified and provided to the environment via the `.env` file as `FIREBASE_SERVICE_ACCOUNT`.
+3. `netlify/shared/db.js` initializes the `firebase-admin` SDK on cold start, utilizing a check (`!admin.apps.length`) to prevent re-initializing during warm serverless starts.
+4. The initialized `db` (Firestore instance) is exported for use by other functions.
 
 ---
 
