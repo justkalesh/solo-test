@@ -106,21 +106,38 @@ async function saveRegistration(id, registrationData) {
 }
 
 /**
- * Retrieves all registrations associated with a mobile number on a specific event date.
- * Requires a composite index on (whatsapp, eventDate) in Firestore.
+ * Retrieves registrations associated with a mobile number.
+ *
+ * Two call modes:
+ *  - **Single-date lookup** (existing callers unaffected):
+ *      `getRegistrationsByMobile(whatsapp, date)` — pass a 'YYYY-MM-DD' date string to
+ *      query with `whatsapp == whatsapp AND eventDate == date`. Useful for duplicate-
+ *      registration checks on a specific night.
+ *  - **All-dates lookup** (for cross-night portals such as find-my-circle):
+ *      `getRegistrationsByMobile(whatsapp)` — omit (or pass null/undefined for) date to
+ *      query with `whatsapp == whatsapp` only, returning every registration for that number
+ *      across all past, present, and future event nights, ordered by eventDate descending
+ *      (most recent first). Requires a single-field index on whatsapp in Firestore (created
+ *      automatically); the orderBy adds eventDate descending (composite index on whatsapp
+ *      ASC + eventDate DESC recommended in the Firebase Console).
  *
  * @param {string} whatsapp - Normalized 10-digit or E.164 mobile number.
- * @param {string} date - Event date in 'YYYY-MM-DD' format.
+ * @param {string} [date] - Optional event date in 'YYYY-MM-DD' format. Omit for all dates.
  * @returns {Promise<Array<Object>>} Array of matching registration objects.
  */
 async function getRegistrationsByMobile(whatsapp, date) {
-  const snapshot = await db.collection('registrations')
-    .where('whatsapp', '==', whatsapp)
-    .where('eventDate', '==', date)
-    .get();
+  let query = db.collection('registrations').where('whatsapp', '==', whatsapp);
 
+  if (date) {
+    // Single-date mode: equality filter on eventDate (original behaviour).
+    query = query.where('eventDate', '==', date);
+  } else {
+    // All-dates mode: no eventDate filter; order most recent first.
+    query = query.orderBy('eventDate', 'desc');
+  }
+
+  const snapshot = await query.get();
   if (snapshot.empty) return [];
-
   return snapshot.docs.map((doc) => doc.data());
 }
 
