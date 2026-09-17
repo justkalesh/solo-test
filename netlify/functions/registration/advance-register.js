@@ -120,45 +120,14 @@ exports.handler = async (event, context) => {
       console.warn('[Ticket OCR Non-Fatal Warning]', ticketErr.message);
     }
 
-    // 6. Partition resolution and pool queuing
-    const genderPref = body.allWomenToggle ? 'allWomen' : 'mixed';
-    const level = body.skillLevel; // 'beginner' | 'intermediate' | 'advanced'
-
-    const currentPool = (await db.getPendingPool(
-      body.city,
-      body.venue,
-      level,
-      genderPref,
-      eventDate
-    )) || [];
-
+    // 6. Generate registration draft ID
     const registrationId = `reg_adv_${phone}_${now}_${crypto.randomBytes(3).toString('hex')}`;
 
-    // Pool participant item
-    const poolItem = {
-      registrationId,
-      name: body.name,
-      whatsapp: phone,
-      gender: body.gender,
-      ageBand: body.ageBand,
-      skillLevel: body.skillLevel,
-      allWomenToggle: body.allWomenToggle,
-      captainOptIn: body.captainOptIn,
-      joinedPoolAt: now,
-    };
-
-    currentPool.push(poolItem);
-    await db.savePendingPool(
-      body.city,
-      body.venue,
-      level,
-      genderPref,
-      eventDate,
-      currentPool
-    );
-
     // 7. Persist Registration Record with paymentStatus: 'pending'
-    // TODO(Phase 3): gate finalization on confirmed payment
+    // GATED PAYMENT ENFORCEMENT (Phase 3):
+    // Registration writes a pending draft record first without adding the attendee to the
+    // matching pool. The attendee is queued into the pending matching pool (db.savePendingPool)
+    // ONLY AFTER payment signature is verified via verify-payment.js or webhook.js.
     const registrationData = {
       id: registrationId,
       name: body.name,
@@ -175,7 +144,7 @@ exports.handler = async (event, context) => {
       ticketVerifiedToken,
       registrationType: 'advance',
       eventDate,
-      paymentStatus: 'pending', // Stubbed for Phase 3 Razorpay integration
+      paymentStatus: 'pending',
       circleId: null, // Assigned later upon batch finalization
       createdAt: now,
     };
@@ -184,13 +153,20 @@ exports.handler = async (event, context) => {
 
     return successResponse({
       registrationId,
-      status: 'pooled',
+      status: 'pending_payment',
       eventDate,
-      poolSize: currentPool.length,
       paymentStatus: 'pending',
-      message:
-        'Advance registration confirmed and added to the matching pool! Circles are finalized and announced 48 hours prior to the event.',
+      city: body.city,
+      venue: body.venue,
+      registrationType: 'advance',
       warnings: warnings.length > 0 ? warnings : null,
+      nextStep: {
+        action: 'create_order',
+        endpoint: '/.netlify/functions/create-order',
+        params: { registrationId },
+      },
+      message:
+        'Advance registration draft created. Please complete payment to enter the matching pool. Circles will be finalized and announced 48 hours prior to the event.',
     }, 201);
   } catch (error) {
     console.error('[advance-register fatal error]', error);
