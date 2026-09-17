@@ -477,6 +477,8 @@ All functions written in Phase 2 interact with the database exclusively through 
 **Reminder for the database teammate**: Until your concrete implementation using `@netlify/blobs` replaces the stub throws in `netlify/shared/db.js`, invoking any of these functions in an integration test or deploy will throw:
 `NOT_IMPLEMENTED: db.js is owned by the database teammate — see docs/BACKEND_HANDOFF_LOG.md for the required contract.`
 
+*(Update 2026-09-17: db.js is no longer a stub — it has been implemented with Firebase Cloud Firestore; see Database Migration section below).*
+
 The business logic in Phase 2 has been written strictly against your contract specifications defined in Phase 1. As soon as your Netlify Blobs storage operations are implemented, the entire Phase 2 business suite will immediately function end-to-end without code changes.
 
 ---
@@ -540,7 +542,7 @@ The code then constructs `allRegistrations = [...todayRegistrations]` and runs a
 
 **Root cause:** `getRegistrationsByMobile` was specified in the Phase 1 contract (item 3) as a single-date lookup tool (its stated purpose was "check if a user is already registered tonight or lookup previous bookings" for a given date). The database teammate implemented it exactly to that spec. But Phase 2 repurposed it in `find-my-circle.js` for a cross-all-dates lookup without either (a) changing the function signature to drop the `date` parameter, or (b) adding a separate `getRegistrationsByMobileAllDates(whatsapp)` function.
 
-**Status: NOT fixed yet — awaiting owner go-ahead before touching `find-my-circle.js`.**
+**Status: FIXED (see "Bug Fix Applied" below).**
 
 ### Step 3 — Infrastructure Additions Made
 
@@ -559,3 +561,15 @@ The `db.js` initialization reads `process.env.FIREBASE_SERVICE_ACCOUNT` directly
 #### Bug Fix Applied — `getRegistrationsByMobile` optional `date` param (2026-09-17)
 
 The confirmed bug was fixed: `getRegistrationsByMobile(whatsapp, date)` now operates in two modes — when `date` is provided (truthy string) the original single-date Firestore query runs unchanged; when `date` is omitted or null the `eventDate` equality filter is dropped entirely and results are ordered by `eventDate` descending, returning every registration for that number across all festival nights. The call site in `find-my-circle.js` was updated from `db.getRegistrationsByMobile(phone, todayDateString)` to `db.getRegistrationsByMobile(phone)`, activating the all-dates path. The access-tier classification block (live / upcoming / past) and its Beacon/Chat access rules — previously dead code because only tonight's records ever arrived — is now live and functioning correctly for all registration dates.
+
+### Known Limitations & Concurrency Risks
+
+1. **Firestore Persistence Layer is Active (`netlify/shared/db.js`)**:
+   - `db.js` is **no longer a stub**. All 18 persistence functions are implemented against Firebase Cloud Firestore (`firebase-admin` SDK) and operational.
+   - The stub errors (`NOT_IMPLEMENTED: db.js is owned by the database teammate...`) have been fully replaced.
+
+2. **Unwrapped Firestore Writes (Race Condition Risk)**:
+   - **Current State**: Writes in `savePendingPool`, `saveGroupState`, and `saveRegistration` execute as standalone `.set(doc, { merge: true })` calls rather than atomic Firestore transactions (`db.runTransaction`) or batched writes.
+   - **Concurrency Risk**: Under concurrent registration surges (e.g., peak festival entry window between 6:30 PM – 8:00 PM IST where dozens or hundreds of attendees register simultaneously), read-modify-write cycles against `getPendingPool`/`savePendingPool` and `getGroupState`/`saveGroupState` can race. This poses a risk of lost updates, duplicate circle allocations, or overwritten pool queues.
+   - **Future Remediation (Phase 3 / Hardening)**: Wrap the batching, matching, and queue transitions into `db.runTransaction` blocks to guarantee atomic read-and-update semantics across concurrent invocations.
+
