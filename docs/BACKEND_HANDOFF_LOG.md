@@ -487,3 +487,75 @@ The remaining items to be built in Phase 3 are:
 1. `netlify/functions/payments/create-order.js`: Razorpay Orders API order creation handler using `formatPriceForRazorpay` and `getPrice`.
 2. `netlify/functions/payments/verify-payment.js`: Post-payment HMAC-SHA256 signature verification validating `razorpay_payment_id`, `razorpay_order_id`, and `razorpay_signature` against `RAZORPAY_KEY_SECRET`.
 3. `netlify/functions/payments/webhook.js`: Inbound payment gateway webhook listener verifying `RAZORPAY_WEBHOOK_SECRET` for asynchronous payment capture and automated attendee confirmation.
+
+---
+
+## Database Migration: Netlify Blobs → Firebase Firestore — 2026-09-17
+
+### Summary
+
+The persistence layer (`netlify/shared/db.js`) has been migrated from the original Netlify Blobs stub to a **Firebase Cloud Firestore** implementation using the `firebase-admin` Node.js SDK.
+
+### Step 1 — Signature Contract Audit Result
+
+All 18 function signatures were verified against the original Phase 1 contract defined above. **No mismatches were found** in function names, parameter count/order, or return shapes for 17 of the 18 functions. The one function that requires scrutiny is `getRegistrationsByMobile`, detailed below.
+
+### Step 2 — ⚠️ CONFIRMED BUG: `find-my-circle.js` × `getRegistrationsByMobile`
+
+**This is a real semantic mismatch between the db.js implementation and the Phase 2 caller.**
+
+**What `db.js` actually does:**
+
+```js
+// netlify/shared/db.js — getRegistrationsByMobile (line 116–125)
+async function getRegistrationsByMobile(whatsapp, date) {
+  const snapshot = await db.collection('registrations')
+    .where('whatsapp', '==', whatsapp)
+    .where('eventDate', '==', date)   // ← equality filter: ONE specific date only
+    .get();
+  ...
+}
+```
+
+It accepts two parameters (`whatsapp`, `date`) and issues a Firestore query with **two `where` clauses** — filtering on both `whatsapp` AND `eventDate`. It returns only registrations for that single date.
+
+**What `find-my-circle.js` actually calls (line 71):**
+
+```js
+// netlify/functions/circle/find-my-circle.js — line 71
+const todayRegistrations = (await db.getRegistrationsByMobile(phone, todayDateString)) || [];
+```
+
+It passes today's IST date string as the second argument, so the query will return **only tonight's registrations**.
+
+**Why this is a bug:**
+
+The Phase 2 spec for `find-my-circle.js` (documented in this log, Phase 2 section, item 8) explicitly requires:
+
+> *"Retrieves all registrations for a phone number **across past, present, and future festival nights**. Enforces access tiers…"*
+
+The function's own file header docstring (lines 6–11) re-states this intent: *"Cross-event registration lookup across past, present, and future festival nights."*
+
+The code then constructs `allRegistrations = [...todayRegistrations]` and runs access-tier logic that handles `'past'`, `'live'`, and `'upcoming'` tiers — but because `getRegistrationsByMobile` only ever returns **today's** records, the past and upcoming branches are dead code in practice. An attendee with advance bookings for next week, or a history of past nights, will never see those registrations in the portal.
+
+**Root cause:** `getRegistrationsByMobile` was specified in the Phase 1 contract (item 3) as a single-date lookup tool (its stated purpose was "check if a user is already registered tonight or lookup previous bookings" for a given date). The database teammate implemented it exactly to that spec. But Phase 2 repurposed it in `find-my-circle.js` for a cross-all-dates lookup without either (a) changing the function signature to drop the `date` parameter, or (b) adding a separate `getRegistrationsByMobileAllDates(whatsapp)` function.
+
+**Status: NOT fixed yet — awaiting owner go-ahead before touching `find-my-circle.js`.**
+
+### Step 3 — Infrastructure Additions Made
+
+#### a) New mandatory environment variable: `FIREBASE_SERVICE_ACCOUNT`
+
+Added to `netlify/config/env.js` following the same pattern as the existing required vars:
+- Appended `'FIREBASE_SERVICE_ACCOUNT'` to the `REQUIRED_ENV_VARS` array (fail-fast on cold-start if missing).
+- Exposed `FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT` in the frozen `config` export.
+
+The `db.js` initialization reads `process.env.FIREBASE_SERVICE_ACCOUNT` directly and calls `JSON.parse()` on it to obtain the service account credentials object passed to `cert()`.
+
+#### b) `firebase-admin` dependency
+
+**Already present** in `package.json` at version `^14.4.0`. No change required.
+
+#### Bug Fix Applied — `getRegistrationsByMobile` optional `date` param (2026-09-17)
+
+The confirmed bug was fixed: `getRegistrationsByMobile(whatsapp, date)` now operates in two modes — when `date` is provided (truthy string) the original single-date Firestore query runs unchanged; when `date` is omitted or null the `eventDate` equality filter is dropped entirely and results are ordered by `eventDate` descending, returning every registration for that number across all festival nights. The call site in `find-my-circle.js` was updated from `db.getRegistrationsByMobile(phone, todayDateString)` to `db.getRegistrationsByMobile(phone)`, activating the all-dates path. The access-tier classification block (live / upcoming / past) and its Beacon/Chat access rules — previously dead code because only tonight's records ever arrived — is now live and functioning correctly for all registration dates.

@@ -67,11 +67,10 @@ exports.handler = async (event, context) => {
   const todayDateString = ist.dateString;
 
   try {
-    // Fetch registrations by mobile for today, plus query general history
-    const todayRegistrations = (await db.getRegistrationsByMobile(phone, todayDateString)) || [];
-
-    // Combine and sort by date/timestamp descending (most recent first)
-    const allRegistrations = [...todayRegistrations];
+    // Fetch ALL registrations for this number across every festival night (past, present,
+    // and future). db.getRegistrationsByMobile without a date arg returns results ordered
+    // by eventDate descending so the most recent night surfaces first.
+    const allRegistrations = (await db.getRegistrationsByMobile(phone)) || [];
 
     allRegistrations.sort((a, b) => {
       const timeA = a.createdAt || (a.eventDate ? new Date(a.eventDate).getTime() : 0);

@@ -21,6 +21,7 @@ const REQUIRED_ENV_VARS = [
   'RAZORPAY_KEY_SECRET',
   'RAZORPAY_WEBHOOK_SECRET',
   'TICKET_TOKEN_SECRET',
+  'FIREBASE_SERVICE_ACCOUNT',
 ];
 
 // Identify any missing required environment variables.
@@ -77,6 +78,7 @@ const config = Object.freeze({
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
   TICKET_TOKEN_SECRET: process.env.TICKET_TOKEN_SECRET,
+  FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT,
   OTP_DEV_MODE: isOtpDevMode,
 });
 
