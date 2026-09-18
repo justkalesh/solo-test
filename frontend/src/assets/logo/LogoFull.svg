@@ -1,0 +1,109 @@
+<svg width="220" height="56" viewBox="0 0 220 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SoloSaathi Circle Full Logo">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;display=swap');
+      .ss-brand-title {
+        font-family: 'Baloo 2', cursive, -apple-system, sans-serif;
+        font-weight: 700;
+        font-size: 19.5px;
+        letter-spacing: 0.2px;
+      }
+      .ss-brand-sub {
+        font-family: 'Baloo 2', cursive, -apple-system, sans-serif;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 3.2px;
+      }
+    </style>
+
+    <!-- Ring Gradient -->
+    <linearGradient id="ss_full_ring_grad" x1="18" y1="18" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F5B301" />
+      <stop offset="35%" stop-color="#E3A542" />
+      <stop offset="70%" stop-color="#DB2777" />
+      <stop offset="100%" stop-color="#9D2FB5" />
+    </linearGradient>
+
+    <!-- Solo Newcomer Glow -->
+    <linearGradient id="ss_full_solo_grad" x1="68" y1="20" x2="84" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF9ED" />
+      <stop offset="45%" stop-color="#F5B301" />
+      <stop offset="100%" stop-color="#E3A542" />
+    </linearGradient>
+
+    <!-- Central Diya Glow -->
+    <radialGradient id="ss_full_diya_glow" cx="50" cy="50" r="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F5B301" stop-opacity="0.45" />
+      <stop offset="50%" stop-color="#DB2777" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#241D42" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Left: Logo Mark (46x46 at x=5, y=5) -->
+  <g transform="translate(5, 5) scale(0.46)">
+    <!-- Ambient Diya Glow -->
+    <circle cx="50" cy="50" r="22" fill="url(#ss_full_diya_glow)" />
+
+    <!-- Rhythmic Orbit Track -->
+    <circle
+      cx="50"
+      cy="50"
+      r="32"
+      stroke="url(#ss_full_ring_grad)"
+      stroke-width="4"
+      stroke-linecap="round"
+      stroke-dasharray="16 8"
+      opacity="0.85"
+    />
+
+    <!-- Central Sacred Diya -->
+    <path
+      d="M50 42 C50 47 47 50 42 50 C47 50 50 53 50 58 C50 53 53 50 58 50 C53 50 50 47 50 42 Z"
+      fill="#F5B301"
+    />
+    <circle cx="50" cy="50" r="2.4" fill="#FFF9ED" />
+
+    <!-- Welcoming Hand Arc -->
+    <path
+      d="M51 18 C62 19 70 24 76 33"
+      stroke="#F5B301"
+      stroke-width="4.2"
+      stroke-linecap="round"
+    />
+
+    <!-- 7 Circle Companions -->
+    <circle cx="82" cy="50" r="5.6" fill="#DB2777" />
+    <circle cx="73" cy="73" r="5.6" fill="#DB2777" />
+    <circle cx="50" cy="82" r="5.6" fill="#C0267C" />
+    <circle cx="27" cy="73" r="5.6" fill="#9D2FB5" />
+    <circle cx="18" cy="50" r="5.6" fill="#E3A542" />
+    <circle cx="27" cy="27" r="5.6" fill="#E3A542" />
+    <circle cx="50" cy="18" r="5.6" fill="#F5B301" />
+
+    <!-- The Solo Saathi (Newcomer) -->
+    <circle
+      cx="74"
+      cy="26"
+      r="9.2"
+      stroke="#F5B301"
+      stroke-width="2"
+      stroke-dasharray="2.5 2"
+      opacity="0.8"
+    />
+    <circle cx="74" cy="26" r="7.2" fill="url(#ss_full_solo_grad)" />
+    <circle cx="72" cy="24" r="2.2" fill="#FFFFFF" />
+  </g>
+
+  <!-- Right: Wordmark (Baloo 2) -->
+  <text x="60" y="27" class="ss-brand-title">
+    <tspan fill="#F3EDE0">Solo</tspan>
+    <tspan dx="4" fill="#F5B301">Saathi</tspan>
+  </text>
+
+  <text x="61" y="44" fill="#DB2777" class="ss-brand-sub">
+    CIRCLE
+  </text>
+
+  <!-- Subtle festive sparkle accent -->
+  <circle cx="137" cy="39" r="1.4" fill="#E3A542" opacity="0.75" />
+</svg>
