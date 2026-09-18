@@ -7,6 +7,10 @@
     "doc": "docs"
   },
   "scripts": {
+    "backend": "npx netlify dev",
+    "backend:functions": "npx netlify functions:serve",
+    "frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
