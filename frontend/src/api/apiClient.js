@@ -24,8 +24,30 @@ export class ApiError extends Error {
  * @returns {Promise<*>} - Resolves with the `data` payload from the backend response.
  */
 export async function apiRequest(endpointPath, options = {}) {
-  const cleanPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
-  const url = `${API_BASE_URL}${cleanPath}`;
+  let url;
+  if (endpointPath.startsWith('http://') || endpointPath.startsWith('https://')) {
+    url = endpointPath;
+  } else if (endpointPath.startsWith('/.netlify/functions/')) {
+    const fnName = endpointPath.replace('/.netlify/functions/', '');
+    url = `${API_BASE_URL}/${fnName}`;
+  } else {
+    const cleanPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
+    url = `${API_BASE_URL}${cleanPath}`;
+  }
+
+  // Handle query parameters
+  if (options.params && typeof options.params === 'object') {
+    const searchParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null) {
+        searchParams.append(key, String(val));
+      }
+    });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += (url.includes('?') ? '&' : '?') + queryString;
+    }
+  }
 
   const headers = {
     'Content-Type': 'application/json',
@@ -103,11 +125,20 @@ export const apiPut = (path, body, options = {}) =>
 export const apiDelete = (path, options = {}) =>
   apiRequest(path, { ...options, method: 'DELETE' });
 
+// Aliases matching alternative naming conventions
+export const getRequest = (path, params, options = {}) =>
+  apiGet(path, { ...options, params });
+
+export const postRequest = (path, body, options = {}) =>
+  apiPost(path, body, options);
+
 export default {
   apiRequest,
   apiGet,
   apiPost,
   apiPut,
   apiDelete,
+  getRequest,
+  postRequest,
   ApiError,
 };
