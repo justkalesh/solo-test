@@ -89,6 +89,56 @@ Replaced every `throw new Error("NOT_IMPLEMENTED...")` in `netlify/shared/db.js`
   - Concurrency strategy (Firestore Transactions & Batched Writes)
 - Updated the Firebase Setup section in `database.md` to reflect the actual implementation (project name, env var name, initialization pattern).
 
+### Task 6: Concurrency Safeguards (Firestore Transactions & Batched Writes)
+
+**Date**: 2026-09-18
+
+The mentor review flagged that the original implementation used sequential `get()` → `set()` calls, which creates race conditions during high-traffic walk-up times (e.g., 100 people paying simultaneously).
+
+#### Changes to `db.js` — New Exports (Additive, No Breaking Changes)
+
+| Export | Purpose |
+|:-------|:--------|
+| `runTransaction(updateFn)` | Wraps `db.runTransaction()` with auto-retry (up to 5×) |
+| `runBatch()` | Returns a `WriteBatch` for atomic multi-document writes |
+| `getDocRef(collection, docId)` | Returns a `DocumentReference` for use in transactions/batches |
+| `getPoolDocId(...)` | Exposes composite key builder for pool docs |
+| `getGroupStateDocId(...)` | Exposes composite key builder for group state docs |
+| `FieldValue` | Exported for `arrayUnion()` and other atomic field operations |
+
+#### Changes to `payment-helpers.js` — Transactional Matching
+
+- **Live path**: Wrapped in `db.runTransaction()` — atomically reads `groupstate` + `circles`, evaluates capacity/gender, then writes `circles` + `groupstate` + `registrations` in one commit.
+- **Advance path**: Wrapped in `db.runTransaction()` — atomically reads pool, checks idempotency, appends, and writes.
+
+#### Changes to `finalize-bucket.js` — Batched Write
+
+- Replaced 4+ sequential writes with a single `batch.commit()`:
+  - `batch.set(circleRef, circleState)` — create circle
+  - `batch.set(regRef, { circleId })` × N — update each matched member's registration
+  - `batch.set(poolRef, { poolArray: remaining })` — clear matched from pool
+  - `batch.set(groupStateRef, updatedState)` — increment counter
+
+#### Changes to `circle-actions.js` — Transactions + ArrayUnion
+
+| Action | Strategy | Documents |
+|:-------|:---------|:----------|
+| `switchCircle` | `runTransaction` | source circle + target circle + registration (3-doc atomic) |
+| `leave` | `runTransaction` | circle + registration (2-doc atomic) |
+| `showup` | `FieldValue.arrayUnion()` | showups (lock-free atomic append, no full transaction needed) |
+| `grow`, `lock`, `transferCaptain` | Unchanged | Single-actor, single-document operations |
+
+---
+
+### Task 7: Local Development Setup
+
+**Date**: 2026-09-18
+
+- Created `netlify.toml` configuring `[build] functions = "netlify/functions"` and `[dev] port = 8888`.
+- Installed `netlify-cli` as a dev dependency.
+- Added dummy env vars for `ADMIN_SECRET`, `WHATSAPP_API_KEY`, `RAZORPAY_KEY_*`, etc. to `.env` for local testing.
+- Verified local dev server starts at `http://localhost:8888`.
+
 ---
 
 ## Git History
@@ -96,6 +146,8 @@ Replaced every `throw new Error("NOT_IMPLEMENTED...")` in `netlify/shared/db.js`
 ```
 007dca0 feat: setup firebase admin and environment variables
 5f46de7 feat: implement firestore database collections and v14 modular API
+02bd8e7 docs: add database context file
+(pending) feat: add firestore transactions and batched writes for concurrency
 ```
 
 Branch pushed to `origin/database-setup`.
@@ -104,11 +156,13 @@ Branch pushed to `origin/database-setup`.
 
 ## Verification Results
 
-- ✅ `db.js` loads and parses without errors
-- ✅ Firestore instance initializes successfully when `FIREBASE_SERVICE_ACCOUNT` is provided
-- ✅ Graceful `null` fallback when env var is missing (no crash)
-- ✅ All 18 functions exported and match the contract in `BACKEND_HANDOFF_LOG.md`
-- ✅ Zero changes required in any Phase 2 consuming modules
+- ✅ `db.js` loads — all 25 exports present (18 original + 6 new transaction helpers + `FieldValue`)
+- ✅ `payment-helpers.js` loads cleanly
+- ✅ `finalize-bucket.js` passes syntax check (`node --check`)
+- ✅ `circle-actions.js` passes syntax check (`node --check`)
+- ✅ Firestore instance initializes when `FIREBASE_SERVICE_ACCOUNT` is provided
+- ✅ Graceful `null` fallback when env var is missing
+- ✅ Local Netlify dev server starts at `http://localhost:8888`
 
 ---
 
@@ -130,8 +184,13 @@ These cannot be done from code and must be completed before production:
 
 | File | Action | Description |
 |:-----|:-------|:------------|
-| `.env` | Created | Contains minified Firebase Service Account JSON |
-| `package.json` | Created | Node.js project manifest with `firebase-admin` dependency |
+| `.env` | Created | Contains minified Firebase Service Account JSON + dummy dev vars |
+| `package.json` | Created | Node.js project manifest with `firebase-admin` + `netlify-cli` dependencies |
 | `package-lock.json` | Created | Dependency lockfile |
-| `netlify/shared/db.js` | Modified | Replaced 18 stubs with Firestore implementations |
-| `docs/database.md` | Created | Firestore architecture and migration guide |
+| `netlify.toml` | Created | Netlify configuration for functions directory and local dev port |
+| `netlify/shared/db.js` | Modified | 18 Firestore implementations + 6 transaction/batch helpers |
+| `netlify/shared/payment-helpers.js` | Modified | Wrapped live + advance matching in Firestore transactions |
+| `netlify/functions/circle/finalize-bucket.js` | Modified | Replaced sequential writes with batched write |
+| `netlify/functions/circle/circle-actions.js` | Modified | Transactions for switchCircle/leave, arrayUnion for showup |
+| `docs/database.md` | Modified | Updated concurrency section with implemented transaction details |
+
