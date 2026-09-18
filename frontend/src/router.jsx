@@ -1,169 +1,157 @@
-import React from 'react';
-import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
-import HomePage from './pages/HomePage';
-import theme from './styles/theme';
-import SectionCard from './components/common/SectionCard';
-import GhostButton from './components/common/GhostButton';
+import LoadingSpinner from './components/common/LoadingSpinner';
+
+// Route-level Code Splitting using React.lazy()
+// Loads each page bundle on-demand to optimize weak festival-ground network performance
+const HomePage = lazy(() => import('./pages/HomePage'));
+const RegisterLivePage = lazy(() => import('./pages/RegisterLivePage'));
+const RegisterAdvancePage = lazy(() => import('./pages/RegisterAdvancePage'));
+const FindMyCirclePage = lazy(() => import('./pages/FindMyCirclePage'));
+const CircleActivePage = lazy(() => import('./pages/CircleActivePage'));
+const CircleChatPage = lazy(() => import('./pages/CircleChatPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const OrganizerLoginPage = lazy(() => import('./pages/OrganizerLoginPage'));
+const OrganizerDashboardPage = lazy(() => import('./pages/OrganizerDashboardPage'));
+const VenuesPage = lazy(() => import('./pages/VenuesPage'));
 
 /**
- * Placeholder component rendered for stubbed Phase 2 routes.
- * In Phase 2, each placeholder will be replaced with its full implementation.
+ * Suspense wrapper for lazy-loaded route components
  */
-function Phase2Placeholder({ title, description, icon = '⏳' }) {
+function SuspenseWrapper({ children }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '60vh',
-        padding: '30px 4vw',
-      }}
+    <Suspense
+      fallback={
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '60vh',
+            padding: '40px 20px',
+          }}
+        >
+          <LoadingSpinner label="Connecting to festival ground..." />
+        </div>
+      }
     >
-      <SectionCard
-        style={{
-          maxWidth: '440px',
-          width: '100%',
-          textAlign: 'center',
-          padding: '36px 24px',
-        }}
-      >
-        <div style={{ fontSize: '40px', marginBottom: '12px' }}>{icon}</div>
-        <h2
-          style={{
-            fontFamily: theme.fonts.heading,
-            fontSize: '22px',
-            color: theme.colors.textPrimary,
-            marginBottom: '8px',
-          }}
-        >
-          {title}
-        </h2>
-        <p
-          style={{
-            fontSize: '13px',
-            color: theme.colors.textMuted,
-            lineHeight: 1.6,
-            marginBottom: '24px',
-          }}
-        >
-          {description}
-        </p>
-        <Link to="/" style={{ textDecoration: 'none' }}>
-          <GhostButton style={{ padding: '10px 20px' }}>← Back to Home</GhostButton>
-        </Link>
-      </SectionCard>
-    </div>
+      {children}
+    </Suspense>
   );
 }
 
 /**
- * React Router Configuration
- *
- * All routes are wrapped inside `AppShell` (which provides NavBar,
- * FestiveBackdrop, and Footer).
+ * React Router Configuration — SoloSaathi Circle Production
  */
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
     children: [
-      // 1. Home / Landing Screen (Phase 1 active screen)
+      // 1. Home / Landing Screen
       {
         index: true,
-        element: <HomePage />,
+        element: (
+          <SuspenseWrapper>
+            <HomePage />
+          </SuspenseWrapper>
+        ),
       },
 
-      // -------------------------------------------------------------------------
-      // PHASE 2 ROUTE STUBS (To be filled in Phase 2)
-      // -------------------------------------------------------------------------
-
-      // Route: /register (Live Walk-Up Registration Flow & AI Ticket Upload)
+      // 2. Live Walk-Up Registration (6:30 PM gate rush, OTP, AI ticket verification, Razorpay)
       {
         path: 'register',
         element: (
-          <Phase2Placeholder
-            title="Live Walk-Up Registration"
-            description="Live registration opens each festival evening at 6:30 PM. Instant AI ticket verification and circle assignment launching in Phase 2."
-            icon="🔍"
-          />
+          <SuspenseWrapper>
+            <RegisterLivePage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Route: /advance (Advance Pre-Booking Registration & Razorpay checkout)
+      // 3. Advance Pre-Booking Registration (Peak/Base pricing, OCR ticket verification, Razorpay)
       {
         path: 'advance',
         element: (
-          <Phase2Placeholder
-            title="Advance Circle Pre-Booking"
-            description="Reserve your circle days ahead for peak Navratri nights. Includes secure Razorpay payment integration, launching in Phase 2."
-            icon="💃"
-          />
+          <SuspenseWrapper>
+            <RegisterAdvancePage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Route: /find-circle (Look up assigned circle by mobile OTP / ticket code)
+      // 4. Find My Circle & Passes (WhatsApp lookup across live, upcoming, past tiers)
       {
         path: 'find-circle',
         element: (
-          <Phase2Placeholder
-            title="Find My Circle"
-            description="Enter your registered phone number or booking ID to retrieve your circle room and Captain assignment. Launching in Phase 2."
-            icon="📍"
-          />
+          <SuspenseWrapper>
+            <FindMyCirclePage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Route: /circle/:circleId (Active Circle Room, Beacon Screen, & Circle Chat)
+      // 5. Active Circle Hub (Beacon pulse, meeting anchor, member roster, gate check-in)
       {
         path: 'circle/:circleId',
         element: (
-          <Phase2Placeholder
-            title="Circle Room & Beacon"
-            description="Live group chat, synchronized color beacon screen, and anchor landmark navigation for your matched Mandli. Launching in Phase 2."
-            icon="🪩"
-          />
+          <SuspenseWrapper>
+            <CircleActivePage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Route: /notifications (Festival updates, day-of alerts, captain callouts)
+      // 6. Circle Group Chat (Ephemeral chat, chips, 1:00 AM IST auto-close, captain controls)
+      {
+        path: 'chat/:circleId',
+        element: (
+          <SuspenseWrapper>
+            <CircleChatPage />
+          </SuspenseWrapper>
+        ),
+      },
+
+      // 7. Festival Notifications & Day-of Alerts
       {
         path: 'notifications',
         element: (
-          <Phase2Placeholder
-            title="Notifications & Alerts"
-            description="Real-time festival alerts, weather notices, and captain callouts for your registered venue. Launching in Phase 2."
-            icon="🔔"
-          />
+          <SuspenseWrapper>
+            <NotificationsPage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Route: /organizer (Organizer Dashboard & Venue Check-in Scanner)
+      // 8. Organizer Portal: Login & Venue Analytics Dashboard
       {
         path: 'organizer',
+        element: <Navigate to="/organizer/dashboard" replace />,
+      },
+      {
+        path: 'organizer/login',
         element: (
-          <Phase2Placeholder
-            title="Organizer Dashboard"
-            description="Live venue attendance tracking, circle capacity management, and pass verification for venue partners. Launching in Phase 2."
-            icon="📊"
-          />
+          <SuspenseWrapper>
+            <OrganizerLoginPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'organizer/dashboard',
+        element: (
+          <SuspenseWrapper>
+            <OrganizerDashboardPage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Route: /venues (Partner festival grounds and anchor locations)
+      // 9. Partner Festival Grounds Directory (GPS Haversine distance calculator)
       {
         path: 'venues',
         element: (
-          <Phase2Placeholder
-            title="Festival Partner Venues"
-            description="Browse participating garba grounds across Gujarat, Mumbai, and India with GPS distance checks. Launching in Phase 2."
-            icon="🎪"
-          />
+          <SuspenseWrapper>
+            <VenuesPage />
+          </SuspenseWrapper>
         ),
       },
 
-      // Catch-all: redirect unknown paths to home
+      // Catch-all route: redirect unknown paths to home
       {
         path: '*',
         element: <Navigate to="/" replace />,
