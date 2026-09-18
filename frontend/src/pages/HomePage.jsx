@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import theme from '../styles/theme';
-import { LogoFull, LogoMark } from '../assets/logo';
+import logoImg from '../assets/logo/Logo.png';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { GhostButton } from '../components/common/GhostButton';
 import { Badge } from '../components/common/Badge';
@@ -142,7 +142,17 @@ export function HomePage() {
             alignItems: 'center',
           }}
         >
-          <LogoFull size={isMobile ? 210 : 280} />
+          <img
+            src={logoImg}
+            alt="SoloSaathi Circle Logo"
+            style={{
+              height: isMobile ? '180px' : '220px',
+              width: 'auto',
+              objectFit: 'contain',
+              display: 'block',
+              filter: 'drop-shadow(0 8px 24px rgba(245, 179, 1, 0.2))',
+            }}
+          />
         </div>
 
         {/* Hero Tagline: "You came to dance. Not to stand alone." */}

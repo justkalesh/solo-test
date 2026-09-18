@@ -101,7 +101,7 @@ export function OtpVerificationModal({
         onVerified({
           whatsapp: cleanPhone,
           verified: true,
-          ttlMinutes: response.ttlMinutes || 30,
+          ttlMinutes: response.verifiedTtlMinutes,
         });
         onClose();
       }

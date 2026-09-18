@@ -146,7 +146,14 @@ Every component references `theme.*` rather than hardcoding values. Below is the
   - The Navratri motifs (`DiyaSticker`, `StringLightsSticker`, `MarigoldGarlandSticker`, `DholakSticker`, `DandiyaSticksSticker`, `MandalaSparkSticker`) are hand-crafted vector inline SVGs using the brand's exact color palette.
   - **Asset Swapping Guide**: If the creative team provides photographed or illustrated high-resolution `.webp` stickers later, place them in `frontend/src/assets/stickers/` and update the export in `FestiveStickers.jsx`. Because the components adhere to the standard `{ size, style, className }` prop interface, **zero layout code will need to change**.
 - **Logos (`frontend/src/assets/logo/`)**:
-  - `LogoFull.jsx`, `LogoMark.jsx`, `LogoMono.jsx` were imported directly from Prompt 0 and integrated into the `NavBar`, `HomePage`, and `index.html`.
+  - Placeholder SVG components (`LogoFull.jsx`, `LogoMark.jsx`, `LogoMono.jsx`) have been superseded by 6 mentor-provided real brand PNG assets located in `frontend/src/assets/logo/`:
+    - `Header.png` (1080x380, horizontal lockup on dark background) → Used in `frontend/src/components/layout/NavBar.jsx`.
+    - `Logo.png` (524x521, full circular/square emblem) → Used in the hero presentation section of `frontend/src/pages/HomePage.jsx`.
+    - `Logo_Square.png` (1074x610) → Used as the site favicon in `frontend/index.html`.
+    - `Logo_Name.png` (890x301, horizontal lockup with logotype) → Available in `frontend/src/assets/logo/` for alternative banner/header lockups.
+    - `Short_Stamp_Style.png` (724x694, ornate stamp mark) → Available in `frontend/src/assets/logo/` for future stamp, pass, or print applications.
+    - `Logo_With_White_Background.png` (524x521, white background variant) → Available in `frontend/src/assets/logo/` for light-theme contexts or physical print collateral.
+  - The original SVG components (`LogoFull.jsx`, `LogoMark.jsx`, `LogoMono.jsx`) remain in the repository as fallbacks and references with deprecation notices.
 
 ---
 

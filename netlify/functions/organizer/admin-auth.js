@@ -136,6 +136,12 @@ exports.handler = async (event, context) => {
   // Validate credentials: check either deterministic formula OR master ADMIN_SECRET
   const expectedPassword = deriveMockVenuePassword(cleanVenueId);
   const isFormulaMatch = cleanPassword === expectedPassword;
+  // SECURITY WARNING / AUDIT FLAG:
+  // The master admin password bypass below (isMasterAdminMatch) is an internal testing backdoor
+  // powered by config.ADMIN_SECRET. It permits authentication into ANY venueId without knowing
+  // the venue-specific password. This backdoor MUST be removed, restricted to development/staging
+  // environments, or gated behind multi-factor authentication before real external venue
+  // organizers are onboarded to the platform.
   const isMasterAdminMatch = cleanPassword === config.ADMIN_SECRET;
 
   if (!isFormulaMatch && !isMasterAdminMatch) {

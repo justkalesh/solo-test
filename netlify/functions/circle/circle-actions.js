@@ -379,6 +379,11 @@ exports.handler = async (event, context) => {
       return successResponse({
         message: `Successfully switched from ${circleId} to ${targetCircleId}.`,
         newCircleId: targetCircleId,
+        newCircle: {
+          ...targetCircle,
+          circleId: targetCircle.circleId || targetCircleId,
+          id: targetCircle.circleId || targetCircleId,
+        },
         switchesRemaining: SWITCH_CIRCLE_MAX_PER_NIGHT - switchHistory.length,
       });
     }
