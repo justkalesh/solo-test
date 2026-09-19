@@ -8,15 +8,16 @@
 ## Current status
 
 ### What works and is fully wired locally
-- **Local Dev Server Integration**: `netlify.toml` correctly bridges the Netlify Functions backend (`netlify/functions/`, port `8888`) with the Vite React frontend (`frontend/`, targetPort `5173`). All serverless functions hot-reload and proxy cleanly without 404 errors.
+- **Local Dev Server Integration (Fixed in Consolidated Pass)**: Netlify Function entrypoint shims were added directly in `netlify/functions/*.js` to resolve Netlify CLI's directory discovery limitation (functions in subdirectories like `otp/send-otp.js` are not auto-discovered by Netlify without root entrypoints). Functions now proxy without 404.
 - **Frontend-Backend Contract Alignment**: All 11 serverless API routes have undergone full contract audit. Request payloads and response shapes are strictly aligned across all registration, payment, circle action, and organizer endpoints.
 - **Live Circle Data Enrichment**: Live registration and payment verification returns an enriched circle object (`circleId`, `skillLevel`, `city`, `venue`, `captainId`, `captainName`, `maxSpots`, `members`) ensuring `CircleActivePage.jsx` renders live roster data rather than fallback mock profiles.
 - **Brand Asset Integration**: 6 mentor-provided PNG brand assets (`Header.png`, `Logo.png`, `Logo_Square.png`, `Logo_Name.png`, `Short_Stamp_Style.png`, `Logo_With_White_Background.png`) are located in `frontend/src/assets/logo/` and rendered in the navigation header, homepage hero, and browser favicon. Legacy SVG components remain preserved as fallbacks with deprecation notices.
-- **Production Build Validation**: `npm --prefix frontend run build` compiles 70 modules cleanly with zero syntax errors, zero missing imports, and zero TypeScript/bundling issues.
+- **Production Build Validation**: `npm --prefix frontend run build` compiles cleanly with zero syntax errors, zero missing imports, and zero TypeScript/bundling issues.
 - **PII Logging Sanitization**: Attendee phone numbers in WhatsApp and SMS failure logs are masked (`***XXXX`).
 
 ### What does NOT work yet or requires external setup
 - **Production Deployment**: The application has **NOT** been deployed to production yet. All verifications to date reflect local development state.
+- **End-to-End Manual Test Verification**: **NOT YET VERIFIED**. The manual test run documented below has not yet been executed end-to-end with active credentials.
 - **Real SMS / WhatsApp Delivery in Production**: Outbound OTP messages require active third-party credentials (`WHATSAPP_API_KEY` with a verified Meta BSP, or TRAI DLT-approved template IDs for Indian SMS gateways). In local development, `OTP_DEV_MODE=true` simulates dispatches by printing 6-digit OTP codes directly to the terminal console.
 - **Live Razorpay Payments**: Order creation and payment signature verification require live Razorpay keys (`RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`). In local dev, test-mode keys (`rzp_test_...`) or mocked order responses must be used.
 - **Cloud Firestore Database**: Requires a Firebase Service Account JSON string in `FIREBASE_SERVICE_ACCOUNT` for live cloud persistence across function instances.
@@ -91,7 +92,10 @@ Open `http://localhost:8888` in your browser.
 
 ---
 
-## End-to-End Manual Verification Run-Through
+## End-to-End Manual Verification Run-Through (NOT YET VERIFIED)
+
+> **STATUS: NOT YET VERIFIED**
+> The following step-by-step test procedure is documented and ready to execute, but has **NOT YET BEEN VERIFIED** end-to-end with live credentials. An earlier version of this document incorrectly described this test sequence as completed; this has been corrected.
 
 Follow this exact sequence to test each feature in order:
 

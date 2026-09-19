@@ -27,14 +27,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const { isMobile, isDesktop } = useDeviceType();
   const [activeLevelPreview, setActiveLevelPreview] = useState('intermediate');
-  const [toastMessage, setToastMessage] = useState(null);
 
-  const showPhase2Notice = (featureName, route) => {
-    setToastMessage(`${featureName} is launching in Phase 2! Navigating to ${route}...`);
-    setTimeout(() => {
-      navigate(route);
-    }, 900);
-  };
 
   return (
     <div
@@ -48,33 +41,7 @@ export function HomePage() {
         overflowX: 'hidden',
       }}
     >
-      {/* Interactive Phase 2 Toast Notification */}
-      {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 100,
-            background: 'linear-gradient(90deg, #F5B301, #DB2777)',
-            color: '#1B1730',
-            fontFamily: theme.fonts.heading,
-            fontWeight: 700,
-            fontSize: '14px',
-            padding: '10px 20px',
-            borderRadius: '999px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            animation: 'floatGentle 2s ease-in-out infinite',
-          }}
-        >
-          <span>✨</span>
-          <span>{toastMessage}</span>
-        </div>
-      )}
+
 
       {/* ========================================================================= */}
       {/* 1. HERO SECTION                                                          */}
@@ -211,7 +178,7 @@ export function HomePage() {
         >
           {/* Dominant Action: Live Match */}
           <PrimaryButton
-            onClick={() => showPhase2Notice('Live Registration', '/register')}
+            onClick={() => navigate('/register')}
             style={{
               fontSize: isMobile ? '16px' : '17px',
               padding: isMobile ? '15px 24px' : '17px 32px',
@@ -223,7 +190,7 @@ export function HomePage() {
 
           {/* Secondary Action: Advance Booking */}
           <GhostButton
-            onClick={() => showPhase2Notice('Advance Pre-Booking', '/advance')}
+            onClick={() => navigate('/advance')}
             style={{
               width: '100%',
               padding: isMobile ? '11px 20px' : '12px 24px',
@@ -709,13 +676,13 @@ export function HomePage() {
             }}
           >
             <PrimaryButton
-              onClick={() => showPhase2Notice('Live Registration', '/register')}
+              onClick={() => navigate('/register')}
               style={{ padding: '14px 28px' }}
             >
               Find Solo Garba Circle
             </PrimaryButton>
             <GhostButton
-              onClick={() => showPhase2Notice('Advance Registration', '/advance')}
+              onClick={() => navigate('/advance')}
               style={{ padding: '12px 24px' }}
             >
               Pre-Book My Circle

@@ -264,3 +264,12 @@ The 6 mentor-provided PNG brand assets were moved from the repository root into 
   - Wide-open CORS (`*`) is active to facilitate local development across differing localhost ports (`8888` / `5173`).
   - **CRITICAL**: Before production deployment, this wildcard header must be locked to the verified production frontend domain (e.g., `https://solosaathi.circle` or the custom festival domain) to prevent cross-origin abuse of serverless function endpoints.
 
+---
+
+## Correction — 2026-09-19
+
+An earlier version of this log and `docs/HANDOVER_README.md` incorrectly described a successful end-to-end test run (OTP sent, verified, registration completed, payment confirmed, real circle displayed) as an already-completed fact. In reality, that test run had not yet occurred because serverless function invocations were returning 404 due to Netlify CLI's directory structure requirement (functions in category subdirectories like `otp/send-otp.js` are not auto-discovered by Netlify without root entrypoints).
+
+The root cause of the 404 has now been diagnosed and fixed by providing root function entrypoints at `netlify/functions/*.js`, and live/advance registration matching has been secured with atomic Firestore transactions (`db.runTransaction`) and batched writes (`runBatch`). The end-to-end testing procedure remains documented as **NOT YET VERIFIED** pending end-to-end execution with real credentials.
+
+
