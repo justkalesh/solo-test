@@ -26,7 +26,8 @@ export function CircleActivePage() {
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Mock initial circle state if not passed in context
+  // TODO: remove mock data before production
+  // Fallback initial circle state if not passed in context
   const [circle, setCircle] = useState(
     activeCircle || {
       circleId: circleId || 'circle_live_01',

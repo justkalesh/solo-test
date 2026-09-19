@@ -148,14 +148,14 @@ exports.handler = async (event, context) => {
 
     if (!whatsappResult.success) {
       console.warn(
-        `[OTP] Primary WhatsApp dispatch failed for ${phone}: ${whatsappResult.error}. Triggering SMS fallback...`
+        `[OTP] Primary WhatsApp dispatch failed for ***${phone.slice(-4)}: ${whatsappResult.error}. Triggering SMS fallback...`
       );
       const smsMessage = `Your SoloSaathi Circle verification code is ${otpCode}. Valid for ${OTP_EXPIRY_MINUTES} minutes. Never share this code.`;
       const smsResult = await sendSmsMessage(phone, smsMessage);
       deliveryChannel = 'sms';
 
       if (!smsResult.success) {
-        console.error(`[OTP] SMS fallback also failed for ${phone}: ${smsResult.error}`);
+        console.error(`[OTP] SMS fallback also failed for ***${phone.slice(-4)}: ${smsResult.error}`);
         return errorResponse(
           'Unable to deliver verification code via WhatsApp or SMS. Please check your phone connection and try again.',
           502,

@@ -1,7 +1,9 @@
+// NOTE: This placeholder SVG logo component has been superseded by mentor-provided
+// brand assets in frontend/src/assets/logo/*.png. Retained as fallback/reference.
 import React from "react";
 
 /**
- * SoloSaathi Circle — Brand Logo Concept
+ * SoloSaathi Circle — Brand Logo Concept (Superseded placeholder)
  * 
  * Concept Explanation:
  * The mark visually captures the product promise: "You came to dance. Not to stand alone."

@@ -136,7 +136,7 @@ async function sendWhatsAppMessage(toNumber, templateName, templateParams) {
     };
   } catch (error) {
     console.error(
-      `[WhatsApp Error] Failed to send template '${templateName}' to '${toNumber}':`,
+      `[WhatsApp Error] Failed to send template '${templateName}' to '***${String(toNumber).slice(-4)}':`,
       error.message
     );
     return {
@@ -204,7 +204,7 @@ async function sendSmsMessage(toNumber, message) {
     };
   } catch (error) {
     console.error(
-      `[SMS Error] Failed to dispatch fallback SMS to '${toNumber}':`,
+      `[SMS Error] Failed to dispatch fallback SMS to '***${String(toNumber).slice(-4)}':`,
       error.message
     );
     return {
