@@ -185,25 +185,33 @@ exports.handler = async (event, context) => {
       createdAt: now,
     };
 
-    await db.saveCircleState(circleId, circleState);
+    // Atomic batched writes using db.runBatch()
+    const batch = db.runBatch();
 
-    // 7. Update Registration Records for all matched attendees
+    // 1. Circle creation
+    const circleRef = db.getDocRef('circles', circleId);
+    batch.set(circleRef, circleState, { merge: true });
+
+    // 2. Per-member registration updates
     for (const member of circleMembers) {
-      const existingReg = (await db.getRegistration(member.registrationId)) || {};
-      await db.saveRegistration(member.registrationId, {
-        ...existingReg,
-        circleId,
-        updatedAt: now,
-      });
+      const regRef = db.getDocRef('registrations', member.registrationId);
+      batch.set(regRef, { circleId, updatedAt: now }, { merge: true });
     }
 
-    // 8. Update Pending Pool and Group Partition State
-    await db.savePendingPool(city, venue, level, genderPref, eventDate, remainingPool);
-    await db.saveGroupState(city, venue, level, genderPref, eventDate, {
+    // 3. Pool clearing / update
+    const poolRef = db.getDocRef('pools', db.getPoolDocId(city, venue, level, genderPref, eventDate));
+    batch.set(poolRef, { poolArray: remainingPool }, { merge: true });
+
+    // 4. Group state counter update
+    const groupStateRef = db.getDocRef('groupstate', db.getGroupStateDocId(city, venue, level, genderPref, eventDate));
+    batch.set(groupStateRef, {
       activeCircleId: circleId,
       lastCircleCounter: nextIndex,
       updatedAt: now,
-    });
+    }, { merge: true });
+
+    await batch.commit();
+
 
     return successResponse({
       circleId,

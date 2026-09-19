@@ -26,37 +26,70 @@ export function CircleActivePage() {
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // TODO: remove mock data before production
-  // Fallback initial circle state if not passed in context
-  const [circle, setCircle] = useState(
-    activeCircle || {
-      circleId: circleId || 'circle_live_01',
-      name: 'TAAL TOLI 1',
-      skillLevel: 'intermediate',
-      city: 'Ahmedabad',
-      venue: 'United Way Garba Grounds',
-      meetingPoint: 'Near Gate 3 Food Court / Ice Cream Stall',
-      captainId: 'reg_mock_captain',
-      captainName: 'Aarav Mehta',
-      members: [
-        { registrationId: 'reg_mock_captain', name: 'Aarav Mehta', gender: 'male', isCaptain: true },
-        { registrationId: user?.registrationId || 'reg_user', name: user?.name || 'You', gender: 'female', isCaptain: false },
-        { registrationId: 'reg_3', name: 'Priya S.', gender: 'female', isCaptain: false },
-        { registrationId: 'reg_4', name: 'Kavita K.', gender: 'female', isCaptain: false },
-        { registrationId: 'reg_5', name: 'Rohan D.', gender: 'male', isCaptain: false },
-        { registrationId: 'reg_6', name: 'Sneha R.', gender: 'female', isCaptain: false },
-        { registrationId: 'reg_7', name: 'Vikram J.', gender: 'male', isCaptain: false },
-        { registrationId: 'reg_8', name: 'Neha P.', gender: 'female', isCaptain: false },
-        { registrationId: 'reg_9', name: 'Aman G.', gender: 'male', isCaptain: false },
-        { registrationId: 'reg_10', name: 'Meera B.', gender: 'female', isCaptain: false },
-        { registrationId: 'reg_11', name: 'Karan T.', gender: 'male', isCaptain: false },
-        { registrationId: 'reg_12', name: 'Divya M.', gender: 'female', isCaptain: false },
-      ],
-      maxSpots: 16,
+  const [circle, setCircle] = useState(activeCircle || null);
+
+  useEffect(() => {
+    if (activeCircle) {
+      setCircle(activeCircle);
     }
-  );
+  }, [activeCircle]);
+
+  const hasValidCircle =
+    circle &&
+    Array.isArray(circle.members) &&
+    circle.meetingPoint;
+
+  if (!hasValidCircle) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          maxWidth: theme.maxWidths.phone,
+          margin: '0 auto',
+          padding: isMobile ? '32px 4vw 40px' : '48px 4vw 60px',
+          boxSizing: 'border-box',
+          textAlign: 'center',
+        }}
+      >
+        <SectionCard style={{ padding: '36px 24px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🪩</div>
+          <h2
+            style={{
+              fontFamily: theme.fonts.heading,
+              fontSize: '22px',
+              fontWeight: 700,
+              color: theme.colors.textPrimary,
+              marginBottom: '8px',
+            }}
+          >
+            No Active Circle Found
+          </h2>
+          <p
+            style={{
+              fontSize: '13.5px',
+              color: theme.colors.textMuted,
+              lineHeight: 1.6,
+              maxWidth: '360px',
+              margin: '0 auto 24px',
+            }}
+          >
+            We couldn't find active circle details for this session. If you recently registered, please ensure your registration and payment completed successfully.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '280px', margin: '0 auto' }}>
+            <PrimaryButton onClick={() => navigate('/register')} style={{ padding: '12px 20px' }}>
+              Register for a Circle
+            </PrimaryButton>
+            <GhostButton onClick={() => navigate('/find-circle')} style={{ padding: '11px 20px' }}>
+              Find My Active Pass
+            </GhostButton>
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
 
   const matchedLevel = theme.levels.find((l) => l.id === circle.skillLevel) || theme.levels[1];
+
 
   // Record physical gate check-in
   const handleCheckIn = async () => {
@@ -215,7 +248,7 @@ export function CircleActivePage() {
               Circle Captain
             </div>
             <div style={{ fontWeight: 700, fontSize: '15px', color: theme.colors.textPrimary }}>
-              {circle.captainName || 'Aarav Mehta'}
+              {circle.captainName || 'Circle Captain'}
             </div>
             <div style={{ fontSize: '12px', color: theme.colors.textMuted }}>
               Starting the rhythm and welcoming all solo dancers!
