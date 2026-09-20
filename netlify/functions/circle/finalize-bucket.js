@@ -185,36 +185,33 @@ exports.handler = async (event, context) => {
       createdAt: now,
     };
 
-    // 6. Build and persist all documents atomically via Batched Write
-    //    This guarantees no attendee is left in a broken state if the function crashes.
+    // Atomic batched writes using db.runBatch()
     const batch = db.runBatch();
 
-    // 6a. Create circle document
+    // 1. Circle creation
     const circleRef = db.getDocRef('circles', circleId);
     batch.set(circleRef, circleState, { merge: true });
 
-    // 6b. Update each matched attendee's registration with their circleId
+    // 2. Per-member registration updates
     for (const member of circleMembers) {
       const regRef = db.getDocRef('registrations', member.registrationId);
       batch.set(regRef, { circleId, updatedAt: now }, { merge: true });
     }
 
-    // 6c. Persist remaining pool (remove finalized members)
-    const poolDocId = db.getPoolDocId(city, venue, level, genderPref, eventDate);
-    const poolRef = db.getDocRef('pools', poolDocId);
+    // 3. Pool clearing / update
+    const poolRef = db.getDocRef('pools', db.getPoolDocId(city, venue, level, genderPref, eventDate));
     batch.set(poolRef, { poolArray: remainingPool }, { merge: true });
 
-    // 6d. Update group partition state counter
-    const groupStateDocId = db.getGroupStateDocId(city, venue, level, genderPref, eventDate);
-    const groupStateRef = db.getDocRef('groupstate', groupStateDocId);
+    // 4. Group state counter update
+    const groupStateRef = db.getDocRef('groupstate', db.getGroupStateDocId(city, venue, level, genderPref, eventDate));
     batch.set(groupStateRef, {
       activeCircleId: circleId,
       lastCircleCounter: nextIndex,
       updatedAt: now,
     }, { merge: true });
 
-    // 6e. Commit all writes atomically
     await batch.commit();
+
 
     return successResponse({
       circleId,

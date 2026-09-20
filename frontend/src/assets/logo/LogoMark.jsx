@@ -1,7 +1,9 @@
+// NOTE: This placeholder SVG logo component has been superseded by mentor-provided
+// brand assets in frontend/src/assets/logo/*.png. Retained as fallback/reference.
 import React from "react";
 
 /**
- * LogoMark - SoloSaathi Circle
+ * LogoMark - SoloSaathi Circle (Superseded placeholder)
  *
  * Standalone circular symbol — favicons, app bar icons, small UI spots.
  *

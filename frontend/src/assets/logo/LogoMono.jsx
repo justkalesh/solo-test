@@ -1,7 +1,9 @@
+// NOTE: This placeholder SVG logo component has been superseded by mentor-provided
+// brand assets in frontend/src/assets/logo/*.png. Retained as fallback/reference.
 import React from "react";
 
 /**
- * LogoMono - SoloSaathi Circle
+ * LogoMono - SoloSaathi Circle (Superseded placeholder)
  * 
  * Single-color flat version designed for very busy backgrounds, high-contrast
  * light/dark surfaces, embroidery, print, or stamped passes.

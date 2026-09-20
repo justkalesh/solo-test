@@ -64,73 +64,6 @@ function _compositeKey(...parts) {
   return parts.map(_slugify).join('_');
 }
 
-// =========================================================================
-// TRANSACTION, BATCH & REFERENCE HELPERS
-// =========================================================================
-
-/**
- * Runs a Firestore Transaction. Firestore automatically retries up to 5 times
- * on contention (optimistic concurrency). The `updateFn` receives a transaction
- * object with `.get(docRef)` and `.set(docRef, data)` methods.
- *
- * @param {Function} updateFn - Async function receiving (transaction) as argument.
- * @returns {Promise<*>} The return value of updateFn after successful commit.
- */
-function runTransaction(updateFn) {
-  return db.runTransaction(updateFn);
-}
-
-/**
- * Creates a Firestore WriteBatch for atomic multi-document writes.
- * Callers use `batch.set()`, `batch.update()`, `batch.delete()`, then `batch.commit()`.
- * Max 500 operations per batch.
- *
- * @returns {FirebaseFirestore.WriteBatch} A new WriteBatch instance.
- */
-function runBatch() {
-  return db.batch();
-}
-
-/**
- * Returns a Firestore DocumentReference for use inside transactions or batches.
- *
- * @param {string} collectionName - Firestore collection name.
- * @param {string} docId - Document ID within the collection.
- * @returns {FirebaseFirestore.DocumentReference} Document reference.
- */
-function getDocRef(collectionName, docId) {
-  return db.collection(collectionName).doc(docId);
-}
-
-/**
- * Builds the composite document ID for a pending pool document.
- * Exposed so transaction callers can construct refs without duplicating slugify logic.
- *
- * @param {string} city
- * @param {string} venue
- * @param {string} level
- * @param {string} genderPref
- * @param {string} eventDate
- * @returns {string} Composite document ID.
- */
-function getPoolDocId(city, venue, level, genderPref, eventDate) {
-  return _compositeKey(city, venue, level, genderPref, eventDate);
-}
-
-/**
- * Builds the composite document ID for a group state document.
- *
- * @param {string} city
- * @param {string} venue
- * @param {string} level
- * @param {string} genderPref
- * @param {string} date
- * @returns {string} Composite document ID.
- */
-function getGroupStateDocId(city, venue, level, genderPref, date) {
-  return _compositeKey(city, venue, level, genderPref, date);
-}
-
 /**
  * Returns today's date in IST (UTC+5:30) as a 'YYYY-MM-DD' string.
  * Used by showups to derive the current event date automatically.
@@ -143,6 +76,64 @@ function _todayIST() {
   const istOffset = 5.5 * 60 * 60 * 1000;
   const istDate = new Date(now.getTime() + istOffset);
   return istDate.toISOString().split('T')[0];
+}
+
+// ---------------------------------------------------------------------------
+// Concurrency & Transaction Helpers (docs/database.md section 3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Executes a Firestore transaction callback.
+ *
+ * @param {Function} updateFn - Function taking (transaction) and returning a Promise.
+ * @returns {Promise<*>} Resolves with the return value of updateFn.
+ */
+function runTransaction(updateFn) {
+  if (!db) throw new Error('[db.runTransaction] Firestore is not initialized.');
+  return db.runTransaction(updateFn);
+}
+
+/**
+ * Creates and returns a Firestore WriteBatch.
+ *
+ * @returns {WriteBatch} Firestore WriteBatch instance.
+ */
+function runBatch() {
+  if (!db) throw new Error('[db.runBatch] Firestore is not initialized.');
+  return db.batch();
+}
+
+/**
+ * Returns a DocumentReference for a given collection and docId.
+ *
+ * @param {string} collection - Collection name.
+ * @param {string} docId - Document ID.
+ * @returns {DocumentReference} Firestore DocumentReference.
+ */
+function getDocRef(collection, docId) {
+  if (!db) throw new Error('[db.getDocRef] Firestore is not initialized.');
+  return db.collection(collection).doc(docId);
+}
+
+/**
+ * Exposes composite-key builder for pools collection.
+ */
+function getPoolDocId(city, venue, level, genderPref, eventDate) {
+  return _compositeKey(city, venue, level, genderPref, eventDate);
+}
+
+/**
+ * Exposes composite-key builder for groupstate collection.
+ */
+function getGroupStateDocId(city, venue, level, genderPref, date) {
+  return _compositeKey(city, venue, level, genderPref, date);
+}
+
+/**
+ * Exposes composite-key builder for showups collection.
+ */
+function getShowupDocId(city, venue) {
+  return _compositeKey(city, venue, _todayIST());
 }
 
 // =========================================================================
@@ -459,13 +450,12 @@ async function getVenues() {
 module.exports = {
   db,
   FieldValue,
-  // Transaction & batch helpers
   runTransaction,
   runBatch,
   getDocRef,
   getPoolDocId,
   getGroupStateDocId,
-  // Original 18 contract functions
+  getShowupDocId,
   getRegistration,
   saveRegistration,
   getRegistrationsByMobile,
@@ -485,3 +475,4 @@ module.exports = {
   saveVerifiedStatus,
   getVenues,
 };
+

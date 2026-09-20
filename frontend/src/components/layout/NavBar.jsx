@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import theme from '../../styles/theme';
-import { LogoFull, LogoMark } from '../../assets/logo';
+import headerLogo from '../../assets/logo/Header.png';
 import { GhostButton } from '../common/GhostButton';
 import { useAppContext } from '../../context/AppContext';
 import { useDeviceType } from '../../hooks/useDeviceType';
@@ -98,24 +98,17 @@ export function NavBar() {
           }}
           aria-label="SoloSaathi Circle Home"
         >
-          {isMobile ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <LogoMark size={38} />
-              <span
-                style={{
-                  fontFamily: theme.fonts.heading,
-                  fontWeight: 700,
-                  fontSize: '18px',
-                  color: theme.colors.textPrimary,
-                  letterSpacing: '0.3px',
-                }}
-              >
-                SoloSaathi
-              </span>
-            </div>
-          ) : (
-            <LogoFull size={180} />
-          )}
+          <img
+            src={headerLogo}
+            alt="SoloSaathi Circle"
+            style={{
+              height: isMobile ? '32px' : '38px',
+              maxWidth: isMobile ? '160px' : '200px',
+              width: 'auto',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
         </Link>
 
         {/* Navigation Action Buttons */}

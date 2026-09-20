@@ -198,51 +198,10 @@ function validateOtpVerifyPayload(payload) {
   };
 }
 
-/**
- * Validates the payload for initializing a Razorpay checkout order.
- *
- * @param {Object} payload - The payment initialization payload.
- * @returns {{valid: boolean, errors: string[]}} Validation status and accumulated errors.
- */
-function validatePaymentInitPayload(payload) {
-  const errors = [];
-
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return { valid: false, errors: ['Payload must be a non-null JSON object'] };
-  }
-
-  const hasRegId =
-    typeof payload.registrationId === 'string' &&
-    payload.registrationId.trim().length > 0;
-  const hasSessionId =
-    typeof payload.sessionId === 'string' &&
-    payload.sessionId.trim().length > 0;
-
-  if (!hasRegId && !hasSessionId) {
-    errors.push(
-      'Either registrationId or sessionId is required and must be a non-empty string'
-    );
-  }
-
-  const isAmountValid =
-    typeof payload.amount === 'number' &&
-    !isNaN(payload.amount) &&
-    payload.amount > 0;
-
-  if (!isAmountValid) {
-    errors.push('amount is required and must be a positive number');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
-
 module.exports = {
   isValidIndianMobile,
   validateRegistrationPayload,
   validateOtpSendPayload,
   validateOtpVerifyPayload,
-  validatePaymentInitPayload,
 };
+

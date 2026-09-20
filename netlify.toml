@@ -1,6 +1,23 @@
+# Netlify Configuration for SoloSaathi Circle
+
+# [build] section defines build settings for both local builds and production deployments on Netlify.
+# - functions: Points Netlify to the folder containing our serverless functions so they are discovered and bundled.
+# - publish: Tells Netlify where the compiled frontend production assets are located.
+# - command: Command to build the frontend Vite application from the repository root.
 [build]
   functions = "netlify/functions"
+  publish = "frontend/dist"
+  command = "npm --prefix frontend run build"
 
+# [dev] section configures the local development environment when running `netlify dev`.
+# - port: The port on which the Netlify local dev proxy runs (team standard: 8888).
+# - targetPort: The local port where Vite dev server runs (confirmed 5173 in frontend/vite.config.js).
+# - command: The command Netlify Dev executes to start the Vite frontend development server.
+# - functions: Explicitly points the dev server to the functions directory for local function loading and hot-reloading.
+# - framework: Set to "#custom" so Netlify CLI uses our specified command and targetPort rather than failing auto-detection on the repo root.
 [dev]
   port = 8888
-  targetPort = 8888
+  targetPort = 5173
+  command = "npm --prefix frontend run dev"
+  functions = "netlify/functions"
+  framework = "#custom"

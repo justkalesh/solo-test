@@ -6,11 +6,6 @@
  * - `joinMatchingBucket`: Decoupled matching engine entry point called only AFTER payment
  *   confirmation (used by both verify-payment.js and webhook.js). Idempotent to prevent
  *   duplicate circle allocations or pool duplicates on webhook retries or concurrent calls.
- *
- *   CONCURRENCY: Both live and advance paths use Firestore Transactions
- *   (`db.runTransaction`) to guarantee atomic read-modify-write cycles. Firestore
- *   automatically retries up to 5 times on contention.
- *
  * - `maskSecret`: Security utility masking all but the last 4 characters of sensitive keys
  *   in debug and failure logs.
  */
@@ -20,6 +15,7 @@ const {
   shouldStartNewBucket,
   checkGenderCap,
 } = require('./matching');
+const { SOFT_MAX_GROUP } = require('./constants');
 const db = require('./db');
 
 /**
@@ -42,9 +38,6 @@ function maskSecret(secret) {
  * - For Advance registrations: checks if the registration ID already exists in the pending pool;
  *   if so, returns existing pool state without creating duplicates.
  *
- * CONCURRENCY: Uses Firestore Transactions for atomic read-modify-write to prevent
- * race conditions during high-traffic walk-up times.
- *
  * @param {Object} registration - Confirmed registration document from Firestore.
  * @returns {Promise<Object>} Assignment result payload containing matching metadata.
  */
@@ -62,10 +55,10 @@ async function joinMatchingBucket(registration) {
   const venue = registration.venue;
 
   // -------------------------------------------------------------------------
-  // 1. LIVE REGISTRATION MATCHING (Transactional)
+  // 1. LIVE REGISTRATION MATCHING
   // -------------------------------------------------------------------------
   if (registrationType === 'live') {
-    // Idempotency: If circle is already assigned, fetch and return current state
+    // Idempotency: If circle is already assigned, fetch and return current state (runs BEFORE transaction)
     if (registration.circleId) {
       const existingCircle = await db.getCircleState(registration.circleId);
       if (existingCircle) {
@@ -75,40 +68,78 @@ async function joinMatchingBucket(registration) {
           circleId: registration.circleId,
           circle: {
             id: existingCircle.circleId,
+            circleId: existingCircle.circleId,
             name: existingCircle.name,
             meetingPoint: existingCircle.meetingPoint,
             chatLink: existingCircle.chatLink,
             isCaptain: existingCircle.captainId === registration.id,
-            totalMembers: existingCircle.totalCount,
+            totalMembers: existingCircle.totalCount || (existingCircle.members ? existingCircle.members.length : 0),
+            skillLevel: existingCircle.skillLevel || level,
+            city: existingCircle.city || city,
+            venue: existingCircle.venue || venue,
+            captainId: existingCircle.captainId || null,
+            captainName: existingCircle.captainName || null,
+            maxSpots: SOFT_MAX_GROUP,
+            members: existingCircle.members || [],
           },
           alreadyJoined: true,
         };
       }
     }
 
-    // Build document references for the transaction
-    const groupStateDocId = db.getGroupStateDocId(city, venue, level, genderPref, eventDate);
-    const groupStateRef = db.getDocRef('groupstate', groupStateDocId);
-    const registrationRef = db.getDocRef('registrations', registration.id);
+    // Wrap the entire live matching read-evaluate-write sequence in a single Firestore transaction
+    return await db.runTransaction(async (transaction) => {
+      const groupStateDocId = db.getGroupStateDocId(city, venue, level, genderPref, eventDate);
+      const groupStateRef = db.getDocRef('groupstate', groupStateDocId);
+      const groupStateDoc = await transaction.get(groupStateRef);
+      const groupState = groupStateDoc.exists ? groupStateDoc.data() : null;
 
-    // Run the entire read-evaluate-write matching cycle inside a transaction
-    const result = await db.runTransaction(async (transaction) => {
-      // 1a. Read group state atomically
-      const groupStateSnap = await transaction.get(groupStateRef);
-      const groupState = groupStateSnap.exists ? groupStateSnap.data() : {};
-
-      let activeCircleId = groupState.activeCircleId || null;
-      let circleCounter = groupState.lastCircleCounter || 0;
+      let activeCircleId = groupState?.activeCircleId || null;
+      let circleCounter = groupState?.lastCircleCounter || 0;
       let circleState = null;
+      let circleRef = null;
 
-      // 1b. Read active circle state atomically (if one exists)
       if (activeCircleId) {
-        const circleRef = db.getDocRef('circles', activeCircleId);
-        const circleSnap = await transaction.get(circleRef);
-        circleState = circleSnap.exists ? circleSnap.data() : null;
+        circleRef = db.getDocRef('circles', activeCircleId);
+        const circleDoc = await transaction.get(circleRef);
+        circleState = circleDoc.exists ? circleDoc.data() : null;
       }
 
-      // 1c. Determine if we need a new circle (pure computation, no DB calls)
+      // Also read registration in transaction to verify idempotency atomically
+      const regRef = db.getDocRef('registrations', registration.id);
+      const regDoc = await transaction.get(regRef);
+      if (regDoc.exists && regDoc.data().circleId) {
+        const assignedCircleId = regDoc.data().circleId;
+        const assignedCircleRef = db.getDocRef('circles', assignedCircleId);
+        const assignedCircleDoc = await transaction.get(assignedCircleRef);
+        if (assignedCircleDoc.exists) {
+          const assigned = assignedCircleDoc.data();
+          return {
+            success: true,
+            type: 'live',
+            circleId: assignedCircleId,
+            circle: {
+              id: assigned.circleId,
+              circleId: assigned.circleId,
+              name: assigned.name,
+              meetingPoint: assigned.meetingPoint,
+              chatLink: assigned.chatLink,
+              isCaptain: assigned.captainId === registration.id,
+              totalMembers: assigned.totalCount || (assigned.members ? assigned.members.length : 0),
+              skillLevel: assigned.skillLevel || level,
+              city: assigned.city || city,
+              venue: assigned.venue || venue,
+              captainId: assigned.captainId || null,
+              captainName: assigned.captainName || null,
+              maxSpots: SOFT_MAX_GROUP,
+              members: assigned.members || [],
+            },
+            alreadyJoined: true,
+          };
+        }
+      }
+
+      // Determine if we need to start a brand new circle
       let needNewCircle = false;
       if (!circleState || circleState.status === 'locked' || circleState.status === 'closed') {
         needNewCircle = true;
@@ -129,6 +160,7 @@ async function joinMatchingBucket(registration) {
       if (needNewCircle) {
         circleCounter += 1;
         activeCircleId = buildCircleId(level, genderPref, circleCounter);
+        circleRef = db.getDocRef('circles', activeCircleId);
         circleState = {
           circleId: activeCircleId,
           name: `${activeCircleId.replace('-', ' ')}`,
@@ -152,7 +184,7 @@ async function joinMatchingBucket(registration) {
         };
       }
 
-      // 1d. Captain assignment
+      // Evaluate Circle Captain assignment
       let isCaptain = false;
       if (registration.captainOptIn && !circleState.captainId) {
         isCaptain = true;
@@ -160,7 +192,7 @@ async function joinMatchingBucket(registration) {
         circleState.captainName = registration.name;
       }
 
-      // 1e. Add attendee to circle member roster
+      // Add attendee to circle member roster
       const newMember = {
         registrationId: registration.id,
         name: registration.name,
@@ -192,18 +224,16 @@ async function joinMatchingBucket(registration) {
         }
       }
 
-      // 1f. Atomic writes — all succeed or none do
-      const circleRef = db.getDocRef('circles', activeCircleId);
+      // Transaction writes
       transaction.set(circleRef, circleState, { merge: true });
-
       transaction.set(groupStateRef, {
         activeCircleId,
         lastCircleCounter: circleCounter,
         updatedAt: now,
       }, { merge: true });
 
-      const updatedRegistration = { ...registration, circleId: activeCircleId };
-      transaction.set(registrationRef, updatedRegistration, { merge: true });
+      registration.circleId = activeCircleId;
+      transaction.set(regRef, { circleId: activeCircleId, updatedAt: now }, { merge: true });
 
       return {
         success: true,
@@ -211,37 +241,57 @@ async function joinMatchingBucket(registration) {
         circleId: activeCircleId,
         circle: {
           id: activeCircleId,
+          circleId: activeCircleId,
           name: circleState.name,
           meetingPoint: circleState.meetingPoint,
           chatLink: circleState.chatLink,
           isCaptain,
-          totalMembers: circleState.totalCount,
+          totalMembers: circleState.totalCount || (circleState.members ? circleState.members.length : 0),
+          skillLevel: circleState.skillLevel || level,
+          city: circleState.city || city,
+          venue: circleState.venue || venue,
+          captainId: circleState.captainId || null,
+          captainName: circleState.captainName || null,
+          maxSpots: SOFT_MAX_GROUP,
+          members: circleState.members || [],
         },
         alreadyJoined: false,
       };
     });
-
-    return result;
   }
 
   // -------------------------------------------------------------------------
-  // 2. ADVANCE REGISTRATION MATCHING (Transactional Pool Queue)
+  // 2. ADVANCE REGISTRATION MATCHING (BATCH POOL QUEUE)
   // -------------------------------------------------------------------------
   if (registrationType === 'advance') {
+    // Idempotency: Check if attendee is already in the pending pool (runs BEFORE transaction)
     const poolDocId = db.getPoolDocId(city, venue, level, genderPref, eventDate);
-    const poolRef = db.getDocRef('pools', poolDocId);
+    const existingPool = (await db.getPendingPool(city, venue, level, genderPref, eventDate)) || [];
+    const alreadyInPool = existingPool.some(
+      (item) => item.registrationId === registration.id
+    );
 
-    const result = await db.runTransaction(async (transaction) => {
-      // 2a. Read pool atomically
-      const poolSnap = await transaction.get(poolRef);
-      const currentPool = poolSnap.exists ? (poolSnap.data().poolArray || []) : [];
+    if (alreadyInPool) {
+      return {
+        success: true,
+        type: 'advance',
+        eventDate,
+        poolSize: existingPool.length,
+        alreadyJoined: true,
+      };
+    }
 
-      // 2b. Idempotency: check if attendee is already in the pool
-      const alreadyInPool = currentPool.some(
+    // Wrap the pool read/append/write in a single Firestore transaction
+    return await db.runTransaction(async (transaction) => {
+      const poolRef = db.getDocRef('pools', poolDocId);
+      const poolDoc = await transaction.get(poolRef);
+      const currentPool = poolDoc.exists ? (poolDoc.data().poolArray || []) : [];
+
+      // Check idempotency inside transaction
+      const inPool = currentPool.some(
         (item) => item.registrationId === registration.id
       );
-
-      if (alreadyInPool) {
+      if (inPool) {
         return {
           success: true,
           type: 'advance',
@@ -251,7 +301,6 @@ async function joinMatchingBucket(registration) {
         };
       }
 
-      // 2c. Append new pool item
       const poolItem = {
         registrationId: registration.id,
         name: registration.name,
@@ -265,8 +314,6 @@ async function joinMatchingBucket(registration) {
       };
 
       currentPool.push(poolItem);
-
-      // 2d. Atomic write
       transaction.set(poolRef, { poolArray: currentPool }, { merge: true });
 
       return {
@@ -277,8 +324,6 @@ async function joinMatchingBucket(registration) {
         alreadyJoined: false,
       };
     });
-
-    return result;
   }
 
   throw new Error(`[joinMatchingBucket] Unknown registrationType: '${registrationType}'`);
@@ -288,3 +333,4 @@ module.exports = {
   maskSecret,
   joinMatchingBucket,
 };
+
