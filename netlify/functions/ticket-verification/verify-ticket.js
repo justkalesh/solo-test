@@ -1,9 +1,9 @@
 /**
  * @file netlify/functions/ticket-verification/verify-ticket.js
- * @description Server-Side Anthropic Claude Vision Ticket Verification for SoloSaathi Circle.
+ * @description Server-Side Google Gemini Flash Ticket Verification for SoloSaathi Circle.
  *
  * Implements:
- * - Server-side only image inspection (never exposes ANTHROPIC_API_KEY to clients).
+ * - Server-side only image inspection (never exposes GEMINI_API_KEY to clients).
  * - Multi-attribute OCR extraction: city, venue, venue_english, pass_id, and plausibility check.
  * - Cryptographic verification token generation: `ticketVerifiedToken` signed with TICKET_TOKEN_SECRET.
  * - Fuzzy venue mismatch detection producing warnings (not hard blocks) when printed ticket
@@ -13,6 +13,7 @@
  */
 
 const crypto = require('crypto');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('../../config/env');
 const { successResponse, errorResponse, handleOptions } = require('../../shared/response');
 
@@ -128,7 +129,7 @@ function generateTicketVerifiedToken(data) {
 }
 
 /**
- * Reusable function to inspect a base64-encoded festival ticket image via Anthropic Claude Vision API.
+ * Reusable function to inspect a base64-encoded festival ticket image via Google Gemini Flash API.
  *
  * @param {string} base64Image - Base64 data string (with or without 'data:image/...;base64,' prefix).
  * @returns {Promise<{city: string|null, venue: string|null, venue_english: string|null, pass_id: string|null, looks_like_valid_ticket: boolean, ticketVerifiedToken: string}>}
@@ -139,24 +140,20 @@ async function extractTicketInfo(base64Image) {
   }
 
   // Parse media type and clean raw base64 string
-  let mediaType = 'image/jpeg';
+  let mimeType = 'image/jpeg';
   let cleanBase64 = base64Image.trim();
 
   if (cleanBase64.startsWith('data:')) {
     const matches = cleanBase64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
     if (matches) {
-      mediaType = matches[1];
+      mimeType = matches[1];
       cleanBase64 = matches[2];
     }
   }
 
-  // Anthropic Claude Messages API request payload
-  const endpoint = 'https://api.anthropic.com/v1/messages';
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-api-key': config.ANTHROPIC_API_KEY,
-    'anthropic-version': '2023-06-01',
-  };
+  // Initialize Google Generative AI client
+  const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const prompt =
     'You are an expert OCR ticket inspector for Navratri/Garba festivals in India. ' +
@@ -170,29 +167,15 @@ async function extractTicketInfo(base64Image) {
     '  "looks_like_valid_ticket": true or false\n' +
     '}';
 
-  const requestBody = {
-    model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mediaType,
-              data: cleanBase64,
-            },
-          },
-          {
-            type: 'text',
-            text: prompt,
-          },
-        ],
-      },
-    ],
+  // Gemini inlineData format for image input
+  const imagePart = {
+    inlineData: {
+      mimeType,
+      data: cleanBase64,
+    },
   };
+
+  const textPart = { text: prompt };
 
   let parsedExtraction = {
     city: null,
@@ -203,37 +186,26 @@ async function extractTicketInfo(base64Image) {
   };
 
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-    });
+    const result = await model.generateContent([imagePart, textPart]);
+    const responseText = result.response.text();
+    const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.warn(`[Ticket Vision Warning] Anthropic API returned HTTP ${response.status}: ${errText}`);
-      // Fallback in case of external API downtime so attendees are not stranded
-      parsedExtraction.looks_like_valid_ticket = true;
-    } else {
-      const data = await response.json();
-      const contentText = data.content?.[0]?.text || '{}';
-      const cleanedJson = contentText.replace(/```json/g, '').replace(/```/g, '').trim();
-
-      try {
-        const jsonResult = JSON.parse(cleanedJson);
-        parsedExtraction = {
-          city: jsonResult.city || null,
-          venue: jsonResult.venue || null,
-          venue_english: jsonResult.venue_english || null,
-          pass_id: jsonResult.pass_id ? String(jsonResult.pass_id) : null,
-          looks_like_valid_ticket: Boolean(jsonResult.looks_like_valid_ticket),
-        };
-      } catch (parseErr) {
-        console.warn('[Ticket Vision Warning] Could not parse AI response JSON:', contentText);
-      }
+    try {
+      const jsonResult = JSON.parse(cleanedJson);
+      parsedExtraction = {
+        city: jsonResult.city || null,
+        venue: jsonResult.venue || null,
+        venue_english: jsonResult.venue_english || null,
+        pass_id: jsonResult.pass_id ? String(jsonResult.pass_id) : null,
+        looks_like_valid_ticket: Boolean(jsonResult.looks_like_valid_ticket),
+      };
+    } catch (parseErr) {
+      console.warn('[Ticket Vision Warning] Could not parse AI response JSON:', responseText);
     }
-  } catch (netErr) {
-    console.warn('[Ticket Vision Warning] Network error contacting Anthropic API:', netErr.message);
+  } catch (apiErr) {
+    console.warn('[Ticket Vision Warning] Gemini API error:', apiErr.message);
+    // Fallback in case of external API downtime so attendees are not stranded
+    parsedExtraction.looks_like_valid_ticket = true;
   }
 
   const ticketVerifiedToken = generateTicketVerifiedToken(parsedExtraction);

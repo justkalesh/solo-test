@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/kritzvitz05-alt/Solo-Saathi-Cirlce#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "firebase-admin": "^14.4.0",
     "razorpay": "^2.9.5"
   },

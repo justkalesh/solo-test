@@ -21,3 +21,4 @@
   command = "npm --prefix frontend run dev"
   functions = "netlify/functions"
   framework = "#custom"
+  timeout = 60

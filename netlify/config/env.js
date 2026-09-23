@@ -4,7 +4,7 @@
  *
  * This module is the single source of truth for all environment variables used across
  * every phase of the SoloSaathi Circle backend (authentication, WhatsApp BSP, SMS fallback,
- * Anthropic AI ticket vision, Razorpay payments, and OTP developer controls).
+ * Google Gemini AI ticket vision, Razorpay payments, and OTP developer controls).
  *
  * It prevents downstream modules from directly referencing `process.env` and enforces
  * fail-fast validation on cold-start: if any mandatory variable is missing, an explicit
@@ -16,7 +16,7 @@ const REQUIRED_ENV_VARS = [
   'ADMIN_SECRET',
   'WHATSAPP_API_KEY',
   'WHATSAPP_API_URL',
-  'ANTHROPIC_API_KEY',
+  'GEMINI_API_KEY',
   'RAZORPAY_KEY_ID',
   'RAZORPAY_KEY_SECRET',
   'RAZORPAY_WEBHOOK_SECRET',
@@ -73,7 +73,7 @@ const config = Object.freeze({
   SMS_API_KEY: process.env.SMS_API_KEY || '',
   SMS_API_URL: process.env.SMS_API_URL || '',
   SMS_DLT_TEMPLATE_ID: process.env.SMS_DLT_TEMPLATE_ID || '',
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,

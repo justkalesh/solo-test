@@ -93,7 +93,7 @@ Audited against the complete required list documented in `docs/BACKEND_HANDOFF_L
    - `ADMIN_SECRET` — **MISSING** (Platform admin / organizer shared secret)
    - `WHATSAPP_API_KEY` — **MISSING** (WhatsApp BSP authentication key)
    - `WHATSAPP_API_URL` — **MISSING** (WhatsApp BSP REST endpoint URL)
-   - `ANTHROPIC_API_KEY` — **MISSING** (Claude Vision API key for ticket verification)
+   - `GEMINI_API_KEY` — **MISSING** (Google Gemini Flash API key for ticket verification)
    - `RAZORPAY_KEY_ID` — **MISSING** (Razorpay Key ID)
    - `RAZORPAY_KEY_SECRET` — **MISSING** (Razorpay Key Secret for HMAC-SHA256 signature verification)
    - `RAZORPAY_WEBHOOK_SECRET` — **MISSING** (Razorpay Webhook verification secret)

@@ -70,8 +70,8 @@ RAZORPAY_KEY_ID=rzp_test_placeholder
 RAZORPAY_KEY_SECRET=rzp_secret_placeholder
 RAZORPAY_WEBHOOK_SECRET=rzp_webhook_secret_placeholder
 
-# Anthropic Claude Vision API Key (optional for ticket OCR testing)
-ANTHROPIC_API_KEY=sk-ant-placeholder
+# Google Gemini Flash API Key (optional for ticket OCR testing)
+GEMINI_API_KEY=your_gemini_api_key_placeholder
 
 # Firebase Service Account (minified JSON string of your Firebase service account credentials)
 FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"your-project-id",...}
@@ -121,7 +121,7 @@ Follow this exact sequence to test each feature in order:
    - **Gender**: Female / Male
    - **Age Band**: 18–25
    - **Captain Opt-in**: Check if you want to test captain assignment.
-2. In the Ticket step, select **"Enter Serial Number"** and type `PASS-TEST-2026` (or upload an image to test OCR if Anthropic key is set).
+2. In the Ticket step, select **"Enter Serial Number"** and type `PASS-TEST-2026` (or upload an image to test OCR if Gemini API key is set).
 3. Click **"Continue to Payment"**.
 4. The draft registration is created in the database and advances to the payment step.
 
@@ -177,7 +177,7 @@ Set the following environment variables in the Netlify site settings (**Site con
 | `ADMIN_SECRET` | **YES** | Strong random secret for platform admin access and scheduled cron invocation. |
 | `WHATSAPP_API_KEY` | **YES** | Production API key from your Meta WhatsApp Business Solution Provider (BSP). |
 | `WHATSAPP_API_URL` | **YES** | Full REST endpoint URL for outbound WhatsApp message dispatch. |
-| `ANTHROPIC_API_KEY` | **YES** | Anthropic API key (`sk-ant-...`) with Claude 3.5 Sonnet access for ticket OCR. |
+| `GEMINI_API_KEY` | **YES** | Google Gemini API key for Gemini 1.5 Flash ticket OCR inspection. |
 | `RAZORPAY_KEY_ID` | **YES** | Production Razorpay Key ID (`rzp_live_...`). |
 | `RAZORPAY_KEY_SECRET` | **YES** | Production Razorpay Key Secret for cryptographic HMAC-SHA256 signature verification. |
 | `RAZORPAY_WEBHOOK_SECRET` | **YES** | Secret configured in the Razorpay Webhook dashboard for `payment.captured` events. |
@@ -230,7 +230,7 @@ In `netlify/shared/pricing.js`:
 
 ## Who built what (for context, not blame)
 
-- **Backend Architecture & Serverless Functions**: Built by the Backend Team (`netlify/functions/**/*.js`, covering OTP authentication, Anthropic Claude Vision ticket verification, Razorpay order/webhook lifecycle, circle matching engine, live circle chat, and organizer operations).
+- **Backend Architecture & Serverless Functions**: Built by the Backend Team (`netlify/functions/**/*.js`, covering OTP authentication, Google Gemini Flash ticket verification, Razorpay order/webhook lifecycle, circle matching engine, live circle chat, and organizer operations).
 - **Database Architecture & Firestore Schema**: Initialized by the Database Teammate (`netlify/shared/db.js`, implementing all 18 Firebase Admin SDK Firestore methods and data contracts across registrations, pools, circles, group partitions, OTP records, and gate showups).
 - **Frontend Foundation, UI System & Full Application**: Built by the Frontend Team (`frontend/src/`, establishing design tokens in `theme.js`, responsive layout in `AppShell.jsx`, code-split routes in `router.jsx`, all 10 page views, and festive UI components).
 - **Cross-Stack Audit, Dev Server & Asset Integration**: Completed in Phase 1 & 2 audit passes (configured `netlify.toml`, aligned API contracts, enriched live circle rosters, migrated mentor PNG brand assets, sanitized logs, and produced audit documentation).

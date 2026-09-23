@@ -2,7 +2,7 @@
 
 ## Full Backend Summary
 
-SoloSaathi Circle is a serverless, real-time social matching platform designed to connect solo attendees at large-scale Navratri Garba festivals in Gujarat into safe, gender-balanced, skill-appropriate cultural circles ("Tolis"). The backend is architected as an event-driven serverless suite running on Netlify Functions, backed by Firebase Cloud Firestore for state persistence, Anthropic Claude Vision for ticket fraud prevention, and Razorpay for live payment capture.
+SoloSaathi Circle is a serverless, real-time social matching platform designed to connect solo attendees at large-scale Navratri Garba festivals in Gujarat into safe, gender-balanced, skill-appropriate cultural circles ("Tolis"). The backend is architected as an event-driven serverless suite running on Netlify Functions, backed by Firebase Cloud Firestore for state persistence, Google Gemini Flash for ticket fraud prevention, and Razorpay for live payment capture.
 
 ### End-to-End System Architecture
 
@@ -40,7 +40,7 @@ SoloSaathi Circle is a serverless, real-time social matching platform designed t
    - Attendees verify their 10-digit Indian mobile number via a 6-digit OTP dispatched over WhatsApp (with automated SMS fallback).
    - Strict brute-force protection: max 3 sends per 15-minute rolling window, 30-second cooldown, and a **hard 5-attempt verification lockout** that permanently burns the code with no manual override.
    - Successful verification grants a 30-minute verified session (`OTP_VERIFIED_TTL_MINUTES = 30`) stored in Firestore.
-   - For ticket authentication, attendees upload ticket photos or serial numbers. Anthropic Claude Vision inspects tickets for authenticity, date plausibility, and venue matching, issuing cryptographically signed tokens.
+   - For ticket authentication, attendees upload ticket photos or serial numbers. Google Gemini Flash inspects tickets for authenticity, date plausibility, and venue matching, issuing cryptographically signed tokens.
 
 2. **Registration Ingestion (`registration/`)**:
    - **Live Walk-Up Registration (`register.js`)**: Operates exclusively during festival nights (6:30 PM to 1:30 AM IST, wrapping past midnight) on/after October 13, 2026. Creates a draft registration with `paymentStatus: 'pending'`.
@@ -434,7 +434,7 @@ The configuration module `netlify/config/env.js` manages 11 variables. All excep
 | `SMS_API_KEY` | Optional | API token for the secondary SMS fallback provider. Optional on deploy; logs a warning if unset. |
 | `SMS_API_URL` | Optional | HTTPS REST endpoint for the SMS fallback provider. |
 | `SMS_DLT_TEMPLATE_ID` | Optional | Indian Telecom TRAI/DLT-approved template ID for transactional OTP and registration SMS alerts. |
-| `ANTHROPIC_API_KEY` | **YES** | API key for Anthropic Claude Vision, used in Phase 2 for instant optical inspection and verification of festival tickets. |
+| `GEMINI_API_KEY` | **YES** | API key for Google Gemini Flash, used for instant optical inspection and verification of festival tickets. |
 | `RAZORPAY_KEY_ID` | **YES** | Live Razorpay Key ID (`rzp_live_...`) for creating checkout orders and payment links. |
 | `RAZORPAY_KEY_SECRET` | **YES** | Live Razorpay Key Secret for generating HMAC-SHA256 signatures and verifying order authenticity. |
 | `RAZORPAY_WEBHOOK_SECRET`| **YES** | Secret token configured in Razorpay Webhooks dashboard to authenticate inbound payment event payloads. |
@@ -498,7 +498,7 @@ In this second phase, we implemented the complete core operational logic for Sol
 4. **Advance Registration (`netlify/functions/registration/advance-register.js`)**:
    Allows pre-event registration anytime up until 2 hours before the event's 7:30 PM IST start (5:30 PM IST cutoff). Requires mandatory ticket photo OCR inspection, warns on venue discrepancies, and queues attendees into partitioned pending pools (`db.getPendingPool` / `db.savePendingPool`) for batch grouping.
 5. **Server-Side AI Ticket Inspection (`netlify/functions/ticket-verification/verify-ticket.js`)**:
-   Securely invokes Anthropic Claude Vision server-side (keeping `ANTHROPIC_API_KEY` hidden from clients) to extract city, venue, pass ID, and plausibility check. Issues cryptographic `ticketVerifiedToken` signed with `TICKET_TOKEN_SECRET`, and fuzzy-matches printed tickets against attendee-chosen venues to flag venue mismatches as non-blocking warnings.
+   Securely invokes Google Gemini Flash server-side (keeping `GEMINI_API_KEY` hidden from clients) to extract city, venue, pass ID, and plausibility check. Issues cryptographic `ticketVerifiedToken` signed with `TICKET_TOKEN_SECRET`, and fuzzy-matches printed tickets against attendee-chosen venues to flag venue mismatches as non-blocking warnings.
 6. **Circle Batch Finalizer (`netlify/functions/circle/finalize-bucket.js`)**:
    An administrative endpoint protected by `ADMIN_SECRET` converting pending pools into finalized circles, electing the first opted-in captain, updating attendee documents with their circle IDs, and updating group partition counters.
 7. **Circle Participant Lifecycle & Switching (`netlify/functions/circle/circle-actions.js`)**:
@@ -728,7 +728,7 @@ The SoloSaathi Circle backend configuration (`netlify/config/env.js`) consolidat
 | `SMS_API_KEY` | Optional | Communications | API key for secondary fallback SMS gateway provider (warning logged if unset). |
 | `SMS_API_URL` | Optional | Communications | HTTPS REST endpoint for secondary fallback SMS provider. |
 | `SMS_DLT_TEMPLATE_ID` | Optional | Communications | TRAI-compliant Indian Telecom DLT registration template ID for transactional SMS. |
-| `ANTHROPIC_API_KEY` | **YES** | AI Inspection | Anthropic Claude Vision API key for optical ticket inspection and fraud prevention. |
+| `GEMINI_API_KEY` | **YES** | AI Inspection | Google Gemini Flash API key for optical ticket inspection and fraud prevention. |
 | `RAZORPAY_KEY_ID` | **YES** | Payments | Live Razorpay Key ID (`rzp_live_...`) for order creation and client checkout widget. |
 | `RAZORPAY_KEY_SECRET` | **YES** | Payments | Live Razorpay Key Secret for HMAC-SHA256 checkout signature verification. |
 | `RAZORPAY_WEBHOOK_SECRET` | **YES** | Payments | Secret token configured in Razorpay Webhooks dashboard to authenticate inbound events. |

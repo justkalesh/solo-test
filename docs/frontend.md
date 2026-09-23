@@ -8,11 +8,11 @@ SoloSaathi Circle connects solo attendees into balanced, cohesive, and volunteer
 
 1. **Live Walk-Up Registration (`/register`)**:
    - Designed for the fast-paced 6:30 PM to 8:30 PM gate rush.
-   - Flow: Mobile input → WhatsApp OTP 6-digit verification (with 30s resend timer and 5-attempt hard-lockout protection) → Profile setup (City, Venue, Skill Level, Gender, Age Band, All-Women group toggle, and Captain opt-in) → Physical ticket verification (compressed canvas image upload verified via Anthropic Claude Vision OCR or manual serial fallback) → Seamless Razorpay checkout (₹199 flat fee) → Gated backend signature verification (`/verify-payment`) → Immediate real-time circle assignment with meeting point and Captain badge.
+   - Flow: Mobile input → WhatsApp OTP 6-digit verification (with 30s resend timer and 5-attempt hard-lockout protection) → Profile setup (City, Venue, Skill Level, Gender, Age Band, All-Women group toggle, and Captain opt-in) → Physical ticket verification (compressed canvas image upload verified via Google Gemini Flash OCR or manual serial fallback) → Seamless Razorpay checkout (₹199 flat fee) → Gated backend signature verification (`/verify-payment`) → Immediate real-time circle assignment with meeting point and Captain badge.
 
 2. **Advance Pre-Booking (`/advance`)**:
    - Designed for attendees planning peak Navratri weekend nights (e.g., Oct 17, 18, 24, 25).
-   - Dynamic pricing (₹249 for peak dates vs. ₹199 base dates), mandatory ticket photo validation via Claude Vision, Razorpay payment, and confirmation into the pre-match pool (finalized 48 hours prior to the festival date).
+   - Dynamic pricing (₹249 for peak dates vs. ₹199 base dates), mandatory ticket photo validation via Gemini Flash, Razorpay payment, and confirmation into the pre-match pool (finalized 48 hours prior to the festival date).
 
 3. **Active Circle Hub & In-App Beacon (`/circle/:circleId`)**:
    - The central post-match rendezvous hub showing the assigned circle name, landmark meeting point, physical gate check-in button (`action: 'showup'`), and live member roster.
@@ -43,7 +43,7 @@ SoloSaathi Circle connects solo attendees into balanced, cohesive, and volunteer
 
 Phase 1 establishes the production-grade frontend architecture for **SoloSaathi Circle**, a real-time festival companion platform by Kritz Vyonera AI Private Limited designed to group solo Garba/Navratri attendees into balanced, Captain-led dance circles.
 
-The backend (a suite of Netlify serverless functions covering phone OTP authentication, Anthropic Claude Vision AI ticket verification (`verify-ticket.js`), circle formation, live circle chat, organizer portal, and Razorpay payment orders) is already complete in `netlify/functions/`. During Phase 1, **no backend code was altered**. Instead, this phase delivered the complete client-side scaffold, design system primitives, routing structure, unified API client, ambient visual effects, and a production landing page.
+The backend (a suite of Netlify serverless functions covering phone OTP authentication, Google Gemini Flash AI ticket verification (`verify-ticket.js`), circle formation, live circle chat, organizer portal, and Razorpay payment orders) is already complete in `netlify/functions/`. During Phase 1, **no backend code was altered**. Instead, this phase delivered the complete client-side scaffold, design system primitives, routing structure, unified API client, ambient visual effects, and a production landing page.
 
 #### Components Built & Architectural Rationale:
 1. **Scaffolding (`frontend/package.json`, `frontend/vite.config.js`, `frontend/index.html`, `frontend/.env.example`)**:
@@ -184,7 +184,7 @@ Phase 2 connects the client application directly to the live Netlify Functions b
 4. **`TicketUploadStep.jsx`**:
    - Two-tab proof verification: Ticket Photo upload or Physical Serial Number.
    - Client-side canvas compression downscales ticket images to max 1200px width at 0.75 JPEG quality before base64 encoding (keeping payloads under ~150KB for rapid mobile transmission).
-   - Pre-checks ticket photo against `POST /verify-ticket` (calling Anthropic Claude Vision OCR) to extract event date and venue, warning the user immediately if a venue mismatch is detected.
+   - Pre-checks ticket photo against `POST /verify-ticket` (calling Google Gemini Flash OCR) to extract event date and venue, warning the user immediately if a venue mismatch is detected.
 
 5. **`PaymentStep.jsx`**:
    - Dynamically loads Razorpay's official checkout library (`https://checkout.razorpay.com/v1/checkout.js`).
