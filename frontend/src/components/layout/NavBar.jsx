@@ -58,16 +58,20 @@ export function NavBar() {
           }}
           aria-label="SoloSaathi Circle Home"
         >
+          {/* The artwork has wide transparent margins; on mobile it is cropped with
+              objectFit: cover so the wordmark stays legible inside the compact header. */}
           <img
             src={headerLogo}
             alt="SoloSaathi Circle"
             style={{
-              height: isMobile ? '34px' : '42px',
-              maxWidth: isMobile ? '200px' : '260px',
-              width: 'auto',
-              objectFit: 'contain',
+              height: '42px',
+              width: isMobile ? '170px' : 'auto',
+              maxWidth: isMobile ? '50vw' : '260px',
+              objectFit: isMobile ? 'cover' : 'contain',
+              objectPosition: 'center 56%',
               display: 'block',
-              mixBlendMode: 'screen',
+              // 'screen' only helps on dark surfaces; on the light navbar it washes the logo out
+              mixBlendMode: mode === 'dark' ? 'screen' : 'normal',
             }}
           />
         </Link>
@@ -162,6 +166,8 @@ export function NavBar() {
               border: `1px solid ${theme.colors.borderDefault}`,
               cursor: 'pointer',
               padding: '7px',
+              minWidth: '40px',
+              minHeight: '40px',
               borderRadius: '10px',
               transition: theme.transitions.fast,
               lineHeight: 1,

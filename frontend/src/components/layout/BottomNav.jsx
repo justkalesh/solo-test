@@ -4,12 +4,14 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAppContext } from '../../context/AppContext';
 import { Home, Search, Bell, MapPin, LayoutDashboard } from 'lucide-react';
 
+// Visible bar height (excluding the iOS home-indicator safe area). AppShell reserves this space.
+export const BOTTOM_NAV_HEIGHT = 60;
+
 /**
  * BottomNav — Mobile-only fixed bottom tab bar
  *
  * Moves navigation items from the cramped top navbar into a clean
- * thumb-friendly bottom tab bar. Only renders on mobile (hidden via
- * CSS media query to avoid useDeviceType dependency).
+ * thumb-friendly bottom tab bar. Rendered by AppShell only when isMobile.
  */
 export function BottomNav() {
   const theme = useTheme();
@@ -25,6 +27,10 @@ export function BottomNav() {
     { key: 'org', label: 'Organizer', icon: LayoutDashboard, path: '/organizer' },
   ];
 
+  // Sub-routes (e.g. /organizer/login) keep their parent tab highlighted
+  const isTabActive = (path) =>
+    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+
   return (
       <nav
         className="bottom-nav"
@@ -35,18 +41,20 @@ export function BottomNav() {
           right: 0,
           zIndex: 50,
           background: theme.colors.surfaceNav || 'rgba(26, 22, 48, 0.98)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           borderTop: theme.borders.subtle,
           display: 'flex',
           justifyContent: 'space-around',
-          alignItems: 'center',
-          height: '60px',
+          alignItems: 'stretch',
+          height: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           transform: 'translateZ(0)',
         }}
         aria-label="Bottom Navigation"
       >
         {tabs.map((tab) => {
-          const isActive = location.pathname === tab.path;
+          const isActive = isTabActive(tab.path);
           const Icon = tab.icon;
           const activeColor = theme.colors.gold;
           const inactiveColor = theme.colors.textMuted;
@@ -66,11 +74,12 @@ export function BottomNav() {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '6px 12px',
+                padding: '6px 4px',
                 borderRadius: '8px',
                 transition: 'color 0.2s ease',
                 position: 'relative',
-                minWidth: '48px',
+                flex: 1,
+                minWidth: 0,
               }}
             >
               <div style={{ position: 'relative', lineHeight: 0 }}>
@@ -105,7 +114,7 @@ export function BottomNav() {
               </div>
               <span
                 style={{
-                  fontSize: '10px',
+                  fontSize: '11px',
                   fontWeight: isActive ? 600 : 400,
                   color: isActive ? activeColor : inactiveColor,
                   fontFamily: theme.fonts.body,

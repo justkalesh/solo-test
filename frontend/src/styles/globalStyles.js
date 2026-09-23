@@ -33,7 +33,14 @@ export function buildGlobalCss(theme) {
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Removes the double-tap zoom delay on touch controls */
+  button, a, input, select, textarea, label {
+    touch-action: manipulation;
   }
 
   #root {
@@ -58,6 +65,23 @@ export function buildGlobalCss(theme) {
   input::placeholder {
     color: ${theme.colors.textPlaceholder};
     opacity: 1;
+  }
+
+  /* iOS Safari zooms the page when focusing a field under 16px — keep form text at 16px on phones.
+     !important is required to win over the inline fontSize set on individual inputs. */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Horizontal chip / pill rails: scroll without a visible scrollbar on touch devices */
+  .scroll-rail {
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-rail::-webkit-scrollbar {
+    display: none;
   }
 
   /* Scrollbar aesthetics */

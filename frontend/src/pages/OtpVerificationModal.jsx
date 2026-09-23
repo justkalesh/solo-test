@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import Portal from '../components/common/Portal';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { apiPost } from '../api/apiClient';
 
@@ -118,6 +119,7 @@ export function OtpVerificationModal({
   };
 
   return (
+    <Portal>
     <div
       role="dialog"
       aria-modal="true"
@@ -127,9 +129,8 @@ export function OtpVerificationModal({
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         padding: '16px',
+        overflowY: 'auto',
         backgroundColor: 'rgba(10, 8, 20, 0.78)',
         backdropFilter: 'blur(8px)',
       }}
@@ -138,11 +139,12 @@ export function OtpVerificationModal({
         style={{
           width: '100%',
           maxWidth: '400px',
+          margin: 'auto',
           background: theme.gradients.cardNeutral,
           borderRadius: '20px',
           border: theme.borders.default,
           boxShadow: '0 16px 40px -10px rgba(0,0,0,0.8)',
-          padding: '28px 24px',
+          padding: '28px 20px 24px',
           position: 'relative',
           color: theme.colors.textPrimary,
         }}
@@ -154,14 +156,15 @@ export function OtpVerificationModal({
           aria-label="Close modal"
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
+            top: '8px',
+            right: '8px',
             background: 'transparent',
             border: 'none',
             color: theme.colors.textMuted,
             fontSize: '18px',
             cursor: 'pointer',
-            padding: '4px',
+            minWidth: '44px',
+            minHeight: '44px',
           }}
         >
           ✕
@@ -266,12 +269,15 @@ export function OtpVerificationModal({
               </span>
               <input
                 type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
                 maxLength={10}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                 placeholder="9876543210"
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   padding: '11px 12px',
                   background: 'transparent',
                   border: 'none',
@@ -314,6 +320,7 @@ export function OtpVerificationModal({
             <input
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
               maxLength={6}
               autoFocus
               value={code}
@@ -362,7 +369,7 @@ export function OtpVerificationModal({
                   border: 'none',
                   color: theme.colors.textMuted,
                   cursor: 'pointer',
-                  padding: '4px',
+                  padding: '12px 4px',
                 }}
               >
                 ← Change Number
@@ -378,7 +385,7 @@ export function OtpVerificationModal({
                   color: cooldown > 0 ? theme.colors.textPlaceholder : theme.colors.amber,
                   cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
-                  padding: '4px',
+                  padding: '12px 4px',
                 }}
               >
                 {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
@@ -388,6 +395,7 @@ export function OtpVerificationModal({
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 

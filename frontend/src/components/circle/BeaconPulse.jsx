@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import Portal from '../common/Portal';
 
 /**
  * BeaconPulse — SoloSaathi Circle
@@ -27,6 +28,7 @@ export function BeaconPulse({
   const cycleSeconds = isFast ? '0.6s' : '2.2s';
 
   return (
+    <Portal>
     <div
       role="dialog"
       aria-label="Circle Beacon Spotting Light"
@@ -39,7 +41,8 @@ export function BeaconPulse({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '40px 20px',
+        padding:
+          'max(40px, env(safe-area-inset-top)) 20px max(40px, env(safe-area-inset-bottom))',
         boxSizing: 'border-box',
         animation: `beaconPulse ${cycleSeconds} ease-in-out infinite`,
         userSelect: 'none',
@@ -54,7 +57,7 @@ export function BeaconPulse({
           borderRadius: '16px',
           padding: '12px 24px',
           textAlign: 'center',
-          color: theme.colors.textPrimary,
+          color: theme.colors.textOnDark,
           border: '0.5px solid rgba(255,255,255,0.2)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         }}
@@ -117,7 +120,8 @@ export function BeaconPulse({
             fontFamily: theme.fonts.body,
             fontWeight: 700,
             fontSize: '13px',
-            padding: '10px 22px',
+            padding: '12px 22px',
+            minHeight: '44px',
             borderRadius: '999px',
             border: 'none',
             cursor: 'pointer',
@@ -134,7 +138,7 @@ export function BeaconPulse({
           onClick={onClose}
           style={{
             background: '#1B1730',
-            color: theme.colors.textPrimary,
+            color: theme.colors.textOnDark,
             fontFamily: theme.fonts.body,
             fontWeight: 700,
             fontSize: '14px',
@@ -150,6 +154,7 @@ export function BeaconPulse({
         </button>
       </div>
     </div>
+    </Portal>
   );
 }
 

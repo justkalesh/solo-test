@@ -27,6 +27,7 @@ export default function NotFoundPage() {
         minHeight: '70vh',
         textAlign: 'center',
         padding: isMobile ? '40px 6vw' : '60px 4vw',
+        width: '100%',
         maxWidth: '520px',
         margin: '0 auto',
       }}
@@ -92,7 +93,7 @@ export default function NotFoundPage() {
             padding: '13px 20px',
             fontSize: '14px',
           }}
-          icon={<Home size={16} color="#14101F" />}
+          icon={<Home size={16} color={theme.colors.textDark} />}
         >
           Back to Home
         </PrimaryButton>
@@ -113,9 +114,9 @@ export default function NotFoundPage() {
       {/* Quick Links */}
       <div
         style={{
-          marginTop: '32px',
+          marginTop: '24px',
           display: 'flex',
-          gap: '16px',
+          gap: '8px',
           flexWrap: 'wrap',
           justifyContent: 'center',
         }}
@@ -138,7 +139,8 @@ export default function NotFoundPage() {
               cursor: 'pointer',
               textDecoration: 'underline',
               textUnderlineOffset: '3px',
-              padding: '4px 0',
+              padding: '10px 8px',
+              minHeight: '44px',
             }}
           >
             {link.label}
