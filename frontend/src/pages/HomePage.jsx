@@ -16,6 +16,20 @@ import {
   MandalaSparkSticker,
 } from '../components/effects/FestiveStickers';
 import { useDeviceType } from '../hooks/useDeviceType';
+import {
+  Search,
+  Ticket,
+  Users,
+  Radio,
+  Zap,
+  Crown,
+  Lightbulb,
+  ShieldCheck,
+  CalendarDays,
+  Scale,
+  Disc3,
+  ArrowRight,
+} from 'lucide-react';
 
 /**
  * HomePage — SoloSaathi Circle Landing Page
@@ -53,13 +67,10 @@ export function HomePage() {
         style={{
           width: '100%',
           maxWidth: isDesktop ? theme.maxWidths.desktop : theme.maxWidths.phone,
-          padding: isMobile ? '24px 5vw 40px' : '44px 4vw 60px',
-          margin: '0 auto',
           textAlign: 'center',
+          padding: isMobile ? '32px 5vw 44px' : '56px 4vw 70px',
+          margin: '0 auto',
           position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
         }}
         aria-label="Hero Section"
       >
@@ -69,7 +80,7 @@ export function HomePage() {
             position: 'absolute',
             top: isMobile ? '-10px' : '0px',
             right: isMobile ? '2%' : '8%',
-            opacity: 0.85,
+            opacity: 0.7,
             pointerEvents: 'none',
           }}
         >
@@ -81,7 +92,7 @@ export function HomePage() {
             position: 'absolute',
             top: isMobile ? '10px' : '15px',
             left: isMobile ? '2%' : '8%',
-            opacity: 0.85,
+            opacity: 0.7,
             pointerEvents: 'none',
           }}
         >
@@ -92,7 +103,7 @@ export function HomePage() {
         <div style={{ marginBottom: '16px' }}>
           <Badge
             color={theme.colors.amber}
-            icon={<span>💃</span>}
+            icon={<Disc3 size={14} color={theme.colors.amber} />}
             style={{
               padding: '6px 14px',
               fontSize: '12px',
@@ -124,6 +135,7 @@ export function HomePage() {
               display: 'block',
               filter: 'drop-shadow(0 4px 16px rgba(245, 179, 1, 0.15))',
               animation: 'spin 8s linear infinite',
+              mixBlendMode: 'screen',
             }}
           />
           {/* Brand Name + Tagline (static) */}
@@ -135,6 +147,7 @@ export function HomePage() {
               width: 'auto',
               objectFit: 'contain',
               display: 'block',
+              mixBlendMode: 'screen',
             }}
           />
         </div>
@@ -174,7 +187,7 @@ export function HomePage() {
             color: theme.colors.textMuted,
             maxWidth: '520px',
             lineHeight: 1.65,
-            margin: '0 0 28px',
+            margin: '0 auto 28px',
           }}
         >
           Register, select your dance pace, and get matched into an evenly-sized,
@@ -191,6 +204,7 @@ export function HomePage() {
             flexDirection: 'column',
             gap: '12px',
             alignItems: 'center',
+            margin: '0 auto',
           }}
         >
           {/* Dominant Action: Live Match */}
@@ -200,7 +214,7 @@ export function HomePage() {
               fontSize: isMobile ? '16px' : '17px',
               padding: isMobile ? '15px 24px' : '17px 32px',
             }}
-            icon={<span style={{ fontSize: '18px' }}>🔍</span>}
+            icon={<Search size={18} color="#14101F" strokeWidth={2.5} />}
           >
             Find Solo Garba Circle
           </PrimaryButton>
@@ -214,7 +228,7 @@ export function HomePage() {
               fontSize: '13.5px',
               borderColor: `${theme.colors.amber}66`,
             }}
-            icon={<span>💃</span>}
+            icon={<CalendarDays size={15} color={theme.colors.amber} />}
           >
             Pre-Book My Circle (Advance)
           </GhostButton>
@@ -233,13 +247,13 @@ export function HomePage() {
           }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ color: theme.colors.liveGreen }}>●</span> 16 Dancers / Circle
+            <Users size={13} color={theme.colors.liveGreen} /> 16 Dancers / Circle
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ color: theme.colors.amber }}>●</span> Equal Gender Balance
+            <Scale size={13} color={theme.colors.amber} /> Equal Gender Balance
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ color: theme.colors.cyan }}>●</span> Volunteer Captain Led
+            <Crown size={13} color={theme.colors.cyan} /> Volunteer Captain Led
           </span>
         </div>
       </section>
@@ -266,89 +280,95 @@ export function HomePage() {
               marginBottom: '6px',
             }}
           >
-            Dance At Your Own Rhythm
+            Dance at Your Level
           </h2>
-          <p style={{ fontSize: '13px', color: theme.colors.textMuted, maxWidth: '440px', margin: '0 auto' }}>
-            Circles are formed by experience level so you can groove comfortably without feeling rushed or held back.
+          <p style={{ fontSize: '13px', color: theme.colors.textMuted }}>
+            Matched so every circle feels right.
           </p>
         </div>
 
-        {/* 3 Skill Level Cards */}
+        {/* Level Selector Pills */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
-            gap: '12px',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px',
+            marginBottom: '16px',
+            flexWrap: 'wrap',
           }}
         >
-          {theme.levels.map((level) => {
-            const isSelected = activeLevelPreview === level.id;
-            return (
-              <div
-                key={level.id}
-                onClick={() => setActiveLevelPreview(level.id)}
-                style={{
-                  position: 'relative',
-                  background: level.gradient,
-                  border: `0.5px solid ${isSelected ? level.color : `${level.color}55`}`,
-                  borderRadius: '16px',
-                  padding: isMobile ? '16px' : '20px',
-                  boxShadow: isSelected
-                    ? `0 8px 30px -4px ${level.color}66`
-                    : `0 4px 18px -6px ${level.color}33`,
-                  transform: isSelected ? 'scale(1.02)' : 'none',
-                  transition: 'all 0.22s ease',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '26px' }}>{level.icon}</span>
-                  <Badge color={level.color} size="sm">
-                    {level.tag}
-                  </Badge>
-                </div>
-                <div
-                  style={{
-                    fontFamily: theme.fonts.heading,
-                    fontWeight: 700,
-                    fontSize: '18px',
-                    color: theme.colors.textPrimary,
-                    marginBottom: '4px',
-                  }}
-                >
-                  {level.label}
-                </div>
-                <p
-                  style={{
-                    fontFamily: theme.fonts.body,
-                    fontSize: '12.5px',
-                    color: theme.colors.textMuted,
-                    lineHeight: 1.5,
-                    margin: 0,
-                  }}
-                >
-                  {level.desc}
-                </p>
-                {isSelected && (
-                  <div
-                    style={{
-                      marginTop: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '11px',
-                      color: level.color,
-                      fontWeight: 600,
-                    }}
-                  >
-                    <span>✓</span> Previewing {level.label} Circle Match
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {[
+            { key: 'beginner', label: 'Beginner', color: theme.colors.beginner },
+            { key: 'intermediate', label: 'Intermediate', color: theme.colors.intermediate },
+            { key: 'advanced', label: 'Advanced', color: theme.colors.advanced },
+          ].map((lvl) => (
+            <button
+              key={lvl.key}
+              onClick={() => setActiveLevelPreview(lvl.key)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '999px',
+                border: `1.5px solid ${activeLevelPreview === lvl.key ? lvl.color : theme.colors.borderDefault}`,
+                background: activeLevelPreview === lvl.key ? `${lvl.color}18` : 'transparent',
+                color: activeLevelPreview === lvl.key ? lvl.color : theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+                fontSize: '13px',
+                fontWeight: activeLevelPreview === lvl.key ? 600 : 400,
+                cursor: 'pointer',
+                transition: theme.transitions.default,
+              }}
+            >
+              {lvl.label}
+            </button>
+          ))}
         </div>
+
+        {/* Level Details Card */}
+        <SectionCard
+          style={{
+            padding: '22px 20px',
+            borderColor: activeLevelPreview === 'beginner'
+              ? `${theme.colors.beginner}44`
+              : activeLevelPreview === 'intermediate'
+              ? `${theme.colors.intermediate}44`
+              : `${theme.colors.advanced}44`,
+            transition: theme.transitions.default,
+          }}
+        >
+          {activeLevelPreview === 'beginner' && (
+            <div>
+              <div style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, color: theme.colors.beginner, marginBottom: '6px' }}>
+                🟢 Beginner Circle
+              </div>
+              <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.6, margin: 0 }}>
+                New to Garba? You'll be in a relaxed circle focused on basic Dodhiyu and two-clap patterns.
+                Your Captain will lead every round with patience. No judgment, just fun.
+              </p>
+            </div>
+          )}
+          {activeLevelPreview === 'intermediate' && (
+            <div>
+              <div style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, color: theme.colors.intermediate, marginBottom: '6px' }}>
+                🟡 Intermediate Circle
+              </div>
+              <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.6, margin: 0 }}>
+                You know the basics and can follow mid-tempo Raas. Circles at this level rotate through
+                classic and semi-fast songs, with room to experiment.
+              </p>
+            </div>
+          )}
+          {activeLevelPreview === 'advanced' && (
+            <div>
+              <div style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, color: theme.colors.advanced, marginBottom: '6px' }}>
+                🔴 Advanced Circle
+              </div>
+              <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.6, margin: 0 }}>
+                Fast-paced Raas Garba, complex choreography, and high-energy performances. This circle
+                is for seasoned dancers who want intensity.
+              </p>
+            </div>
+          )}
+        </SectionCard>
       </section>
 
       {/* ========================================================================= */}
@@ -364,7 +384,7 @@ export function HomePage() {
         aria-label="How It Works"
       >
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <Badge color={theme.colors.cyan} icon={<span>⚡</span>} style={{ marginBottom: '10px' }}>
+          <Badge color={theme.colors.cyan} icon={<Zap size={13} color={theme.colors.cyan} />} style={{ marginBottom: '10px' }}>
             Zero Friction
           </Badge>
           <h2
@@ -411,10 +431,9 @@ export function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '20px',
                 }}
               >
-                🎟️
+                <Ticket size={20} color={theme.colors.gold} />
               </div>
               <span
                 style={{
@@ -465,10 +484,9 @@ export function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '20px',
                 }}
               >
-                ⚖️
+                <Users size={20} color={theme.colors.pink} />
               </div>
               <span
                 style={{
@@ -519,10 +537,9 @@ export function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '20px',
                 }}
               >
-                🪩
+                <Radio size={20} color={theme.colors.cyan} />
               </div>
               <span
                 style={{
@@ -576,7 +593,20 @@ export function HomePage() {
         >
           {/* Pillar 1: Captain Led */}
           <SectionCard style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-            <div style={{ fontSize: '28px', flexShrink: 0 }}>👑</div>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'rgba(245, 179, 1, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Crown size={22} color={theme.colors.gold} />
+            </div>
             <div>
               <div style={{ fontFamily: theme.fonts.heading, fontSize: '16px', fontWeight: 700, color: theme.colors.textPrimary, marginBottom: '3px' }}>
                 Volunteer Circle Captains
@@ -589,7 +619,20 @@ export function HomePage() {
 
           {/* Pillar 2: In-App Beacon Spotting */}
           <SectionCard style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-            <div style={{ fontSize: '28px', flexShrink: 0 }}>💡</div>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'rgba(0, 194, 209, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Lightbulb size={22} color={theme.colors.cyan} />
+            </div>
             <div>
               <div style={{ fontFamily: theme.fonts.heading, fontSize: '16px', fontWeight: 700, color: theme.colors.textPrimary, marginBottom: '3px' }}>
                 In-App Beacon Spotting
@@ -602,7 +645,20 @@ export function HomePage() {
 
           {/* Pillar 3: Verified Dancers Only */}
           <SectionCard style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-            <div style={{ fontSize: '28px', flexShrink: 0 }}>🛡️</div>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'rgba(219, 39, 119, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <ShieldCheck size={22} color={theme.colors.pink} />
+            </div>
             <div>
               <div style={{ fontFamily: theme.fonts.heading, fontSize: '16px', fontWeight: 700, color: theme.colors.textPrimary, marginBottom: '3px' }}>
                 100% Verified Community
@@ -615,7 +671,20 @@ export function HomePage() {
 
           {/* Pillar 4: Live & Advance Options */}
           <SectionCard style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-            <div style={{ fontSize: '28px', flexShrink: 0 }}>📅</div>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'rgba(124, 58, 237, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CalendarDays size={22} color={theme.colors.violet} />
+            </div>
             <div>
               <div style={{ fontFamily: theme.fonts.heading, fontSize: '16px', fontWeight: 700, color: theme.colors.textPrimary, marginBottom: '3px' }}>
                 Two Ways to Circle Up
@@ -650,11 +719,11 @@ export function HomePage() {
           }}
         >
           {/* Decorative Dholak and Diya */}
-          <div style={{ position: 'absolute', bottom: '-8px', left: '-8px', opacity: 0.6, pointerEvents: 'none' }}>
-            <DholakSticker size={64} />
+          <div style={{ position: 'absolute', bottom: '-4px', left: '-4px', opacity: 0.5, pointerEvents: 'none' }}>
+            <DholakSticker size={isMobile ? 52 : 64} />
           </div>
-          <div style={{ position: 'absolute', top: '10px', right: '12px', opacity: 0.8, pointerEvents: 'none' }}>
-            <DiyaSticker size={40} />
+          <div style={{ position: 'absolute', top: '10px', right: '12px', opacity: 0.6, pointerEvents: 'none' }}>
+            <DiyaSticker size={isMobile ? 32 : 40} />
           </div>
 
           <h2
@@ -695,6 +764,7 @@ export function HomePage() {
             <PrimaryButton
               onClick={() => navigate('/register')}
               style={{ padding: '14px 28px' }}
+              icon={<ArrowRight size={16} color="#14101F" />}
             >
               Find Solo Garba Circle
             </PrimaryButton>

@@ -15,6 +15,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const OrganizerLoginPage = lazy(() => import('./pages/OrganizerLoginPage'));
 const OrganizerDashboardPage = lazy(() => import('./pages/OrganizerDashboardPage'));
 const VenuesPage = lazy(() => import('./pages/VenuesPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 /**
  * Suspense wrapper for lazy-loaded route components
@@ -151,10 +152,14 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // Catch-all route: redirect unknown paths to home
+      // 10. 404 — Not Found
       {
         path: '*',
-        element: <Navigate to="/" replace />,
+        element: (
+          <SuspenseWrapper>
+            <NotFoundPage />
+          </SuspenseWrapper>
+        ),
       },
     ],
   },

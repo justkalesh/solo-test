@@ -136,6 +136,7 @@ export const lightTheme = deepFreeze({
     // Borders & Dividers
     borderDefault: '#E8D8C8',
     borderSubtle: '#F0E4D6',
+    borderLight: '#F0E4D6',
     borderFocus: '#D4900A',
     borderDanger: '#F43F5E',
   },
@@ -248,6 +249,7 @@ export const darkTheme = deepFreeze({
     // Borders & Dividers
     borderDefault: '#4A3B6E',
     borderSubtle: '#3A3257',
+    borderLight: '#3A3257',
     borderFocus: '#E3A542',
     borderDanger: '#F43F5E',
   },
