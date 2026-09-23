@@ -69,6 +69,7 @@ export default function OrganizerDashboardPage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '900px',
         margin: '0 auto',
         padding: '30px 4vw 80px',
@@ -110,7 +111,7 @@ export default function OrganizerDashboardPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', maxWidth: '100%' }}>
           <input
             id="input-organizer-date-filter"
             type="date"
@@ -121,6 +122,9 @@ export default function OrganizerDashboardPage() {
               border: `1px solid ${theme.colors.borderLight}`,
               borderRadius: '8px',
               padding: '6px 10px',
+              minHeight: '40px',
+              flex: '1 1 140px',
+              minWidth: 0,
               color: theme.colors.textPrimary,
               fontSize: '12px',
             }}
@@ -128,14 +132,14 @@ export default function OrganizerDashboardPage() {
           <GhostButton
             id="btn-organizer-refresh"
             onClick={fetchStats}
-            style={{ padding: '6px 12px', fontSize: '12px' }}
+            style={{ padding: '8px 12px', minHeight: '40px', fontSize: '12px' }}
           >
             🔄 Refresh
           </GhostButton>
           <GhostButton
             id="btn-organizer-logout"
             onClick={handleLogout}
-            style={{ padding: '6px 12px', fontSize: '12px', color: '#F87171' }}
+            style={{ padding: '8px 12px', minHeight: '40px', fontSize: '12px', color: '#F87171' }}
           >
             Sign Out
           </GhostButton>
@@ -182,7 +186,7 @@ export default function OrganizerDashboardPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
               gap: '16px',
             }}
           >
@@ -263,7 +267,7 @@ export default function OrganizerDashboardPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
               gap: '16px',
             }}
           >
@@ -362,7 +366,7 @@ export default function OrganizerDashboardPage() {
                   {
                     label: 'Female Attendees',
                     count: stats.genderBalance?.female || 0,
-                    color: theme.colors.primary,
+                    color: theme.colors.pink,
                   },
                   {
                     label: 'Male Attendees',

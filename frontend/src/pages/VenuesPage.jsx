@@ -133,6 +133,7 @@ export default function VenuesPage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '840px',
         margin: '0 auto',
         padding: isMobile ? '20px 4vw 40px' : '30px 4vw 80px',
@@ -188,7 +189,8 @@ export default function VenuesPage() {
             id="btn-venues-locate-me"
             loading={geoLoading}
             onClick={handleLocateMe}
-            style={{ padding: '8px 16px', fontSize: '12px', width: isMobile ? '100%' : 'auto' }}
+            fullWidth={isMobile}
+            style={{ padding: isMobile ? '12px 16px' : '8px 16px', fontSize: isMobile ? '14px' : '12px' }}
           >
             {userLocation ? '✓ GPS Located' : 'Find Near Me'}
           </PrimaryButton>
@@ -221,6 +223,7 @@ export default function VenuesPage() {
 
       {/* City Filter Pills */}
       <div
+        className="scroll-rail"
         style={{
           display: 'flex',
           gap: '8px',
@@ -242,8 +245,9 @@ export default function VenuesPage() {
               border: `1px solid ${selectedCity === c ? 'transparent' : theme.colors.borderDefault}`,
               borderRadius: '20px',
               color: selectedCity === c ? '#14101F' : theme.colors.textSecondary,
-              padding: '6px 14px',
-              fontSize: '12px',
+              padding: '6px 16px',
+              minHeight: '40px',
+              fontSize: '13px',
               fontWeight: selectedCity === c ? 600 : 400,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -287,7 +291,7 @@ export default function VenuesPage() {
                 >
                   <span
                     style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       color: theme.colors.cyan,
                       background: 'rgba(0,194,209,0.1)',
                       border: `1px solid ${theme.colors.cyan}`,
@@ -335,7 +339,7 @@ export default function VenuesPage() {
                   to={`/register?city=${encodeURIComponent(v.city)}&venue=${encodeURIComponent(v.name)}`}
                   style={{ textDecoration: 'none', flex: 1 }}
                 >
-                  <PrimaryButton style={{ width: '100%', padding: isMobile ? '10px' : '7px', fontSize: isMobile ? '13px' : '11px' }}>
+                  <PrimaryButton style={{ width: '100%', padding: isMobile ? '12px' : '7px', fontSize: isMobile ? '14px' : '11px' }}>
                     Register Live
                   </PrimaryButton>
                 </Link>
@@ -343,7 +347,7 @@ export default function VenuesPage() {
                   to={`/advance?city=${encodeURIComponent(v.city)}&venue=${encodeURIComponent(v.name)}`}
                   style={{ textDecoration: 'none', flex: 1 }}
                 >
-                  <GhostButton style={{ width: '100%', padding: isMobile ? '10px' : '7px', fontSize: isMobile ? '13px' : '11px' }}>
+                  <GhostButton style={{ width: '100%', padding: isMobile ? '12px' : '7px', fontSize: isMobile ? '14px' : '11px' }}>
                     Book Advance
                   </GhostButton>
                 </Link>

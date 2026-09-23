@@ -135,7 +135,7 @@ export function HomePage() {
               display: 'block',
               filter: 'drop-shadow(0 4px 16px rgba(245, 179, 1, 0.15))',
               animation: 'spin 8s linear infinite',
-              mixBlendMode: 'screen',
+              mixBlendMode: theme.mode === 'dark' ? 'screen' : 'normal',
             }}
           />
           {/* Brand Name + Tagline (static) */}
@@ -147,7 +147,7 @@ export function HomePage() {
               width: 'auto',
               objectFit: 'contain',
               display: 'block',
-              mixBlendMode: 'screen',
+              mixBlendMode: theme.mode === 'dark' ? 'screen' : 'normal',
             }}
           />
         </div>
@@ -214,7 +214,7 @@ export function HomePage() {
               fontSize: isMobile ? '16px' : '17px',
               padding: isMobile ? '15px 24px' : '17px 32px',
             }}
-            icon={<Search size={18} color="#14101F" strokeWidth={2.5} />}
+            icon={<Search size={18} color={theme.colors.textDark} strokeWidth={2.5} />}
           >
             Find Solo Garba Circle
           </PrimaryButton>
@@ -307,6 +307,7 @@ export function HomePage() {
               onClick={() => setActiveLevelPreview(lvl.key)}
               style={{
                 padding: '8px 18px',
+                minHeight: '40px',
                 borderRadius: '999px',
                 border: `1.5px solid ${activeLevelPreview === lvl.key ? lvl.color : theme.colors.borderDefault}`,
                 background: activeLevelPreview === lvl.key ? `${lvl.color}18` : 'transparent',
@@ -315,7 +316,7 @@ export function HomePage() {
                 fontSize: '13px',
                 fontWeight: activeLevelPreview === lvl.key ? 600 : 400,
                 cursor: 'pointer',
-                transition: theme.transitions.default,
+                transition: theme.transitions.normal,
               }}
             >
               {lvl.label}
@@ -332,7 +333,7 @@ export function HomePage() {
               : activeLevelPreview === 'intermediate'
               ? `${theme.colors.intermediate}44`
               : `${theme.colors.advanced}44`,
-            transition: theme.transitions.default,
+            transition: theme.transitions.normal,
           }}
         >
           {activeLevelPreview === 'beginner' && (
@@ -731,7 +732,7 @@ export function HomePage() {
               fontFamily: theme.fonts.heading,
               fontSize: isMobile ? '24px' : '32px',
               fontWeight: 700,
-              color: theme.colors.textPrimary,
+              color: theme.colors.textOnDark,
               marginBottom: '10px',
             }}
           >
@@ -741,7 +742,7 @@ export function HomePage() {
             style={{
               fontFamily: theme.fonts.body,
               fontSize: '13.5px',
-              color: theme.colors.textMuted,
+              color: theme.colors.textOnDarkMuted,
               maxWidth: '460px',
               margin: '0 auto 24px',
               lineHeight: 1.6,
@@ -764,7 +765,7 @@ export function HomePage() {
             <PrimaryButton
               onClick={() => navigate('/register')}
               style={{ padding: '14px 28px' }}
-              icon={<ArrowRight size={16} color="#14101F" />}
+              icon={<ArrowRight size={16} color={theme.colors.textDark} />}
             >
               Find Solo Garba Circle
             </PrimaryButton>

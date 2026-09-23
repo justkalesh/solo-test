@@ -8,7 +8,9 @@ import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SwitchCircleControl from '../components/circle/SwitchCircleControl';
+import Portal from '../components/common/Portal';
 import { postRequest, getRequest } from '../api/apiClient';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 /**
  * Calculates current time in Indian Standard Time (IST, UTC+5:30)
@@ -35,6 +37,7 @@ const SOS_WHATSAPP = '911234567890';
 
 export default function CircleChatPage() {
   const theme = useTheme();
+  const { isMobile } = useDeviceType();
   const { circleId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,9 +89,11 @@ export default function CircleChatPage() {
 
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom when messages update
+  // Scroll the feed (not the whole page) to the latest message. scrollIntoView would also
+  // scroll the window, pushing the chat header off-screen on phones.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const feed = messagesEndRef.current?.parentElement;
+    if (feed) feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
   // Check 1:00 AM IST Auto-close schedule
@@ -201,9 +206,10 @@ export default function CircleChatPage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '560px',
         margin: '0 auto',
-        padding: '16px 16px 80px',
+        padding: isMobile ? '12px 4vw 16px' : '16px 16px 80px',
         minHeight: '85vh',
         display: 'flex',
         flexDirection: 'column',
@@ -223,11 +229,17 @@ export default function CircleChatPage() {
         <Link
           to={`/circle/${circleId || ''}`}
           state={{ circle, registrationId, userName }}
-          style={{ textDecoration: 'none', color: theme.colors.textMuted, fontSize: '13px' }}
+          style={{
+            textDecoration: 'none',
+            color: theme.colors.textMuted,
+            fontSize: '13px',
+            padding: '10px 4px',
+            flexShrink: 0,
+          }}
         >
-          ← Beacon & Roster
+          {isMobile ? '← Roster' : '← Beacon & Roster'}
         </Link>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', minWidth: 0, flex: 1, padding: '0 8px' }}>
           <h2
             style={{
               fontFamily: theme.fonts.heading,
@@ -238,7 +250,15 @@ export default function CircleChatPage() {
           >
             {circle?.name || `Circle #${circleId ? circleId.slice(-4) : 'Live'}`}
           </h2>
-          <div style={{ fontSize: '11px', color: theme.colors.textMuted }}>
+          <div
+            style={{
+              fontSize: '11px',
+              color: theme.colors.textMuted,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {circle?.meetingPoint || 'Ground Meeting Point'}
           </div>
         </div>
@@ -250,9 +270,11 @@ export default function CircleChatPage() {
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: '8px',
             color: theme.colors.gold,
-            padding: '6px 10px',
+            padding: '8px 12px',
+            minHeight: '40px',
+            flexShrink: 0,
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '13px',
           }}
         >
           ⚙️ Tools
@@ -304,12 +326,13 @@ export default function CircleChatPage() {
           rel="noopener noreferrer"
           style={{
             textDecoration: 'none',
-            fontSize: '11px',
+            fontSize: '12px',
             color: '#F87171',
             background: '#450A0A',
             border: '1px solid #B91C1C',
-            borderRadius: '6px',
-            padding: '4px 8px',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            minHeight: '40px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
@@ -324,8 +347,9 @@ export default function CircleChatPage() {
       <SectionCard
         style={{
           flex: 1,
-          minHeight: '380px',
-          maxHeight: '480px',
+          minHeight: isMobile ? '240px' : '380px',
+          maxHeight: isMobile ? 'none' : '480px',
+          height: isMobile ? 'calc(100dvh - 390px)' : undefined,
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -370,7 +394,7 @@ export default function CircleChatPage() {
             >
               <div
                 style={{
-                  fontSize: '10px',
+                  fontSize: '11px',
                   color: m.isCaptain ? theme.colors.gold : theme.colors.textMuted,
                   marginBottom: '2px',
                   display: 'flex',
@@ -379,14 +403,12 @@ export default function CircleChatPage() {
                 }}
               >
                 {m.sender}
-                {m.isCaptain && <span style={{ fontSize: '9px' }}>👑 Captain</span>}
+                {m.isCaptain && <span style={{ fontSize: '10px' }}>👑 Captain</span>}
               </div>
               <div
                 style={{
-                  background: isMe
-                    ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})`
-                    : theme.colors.cardBackground,
-                  color: theme.colors.textPrimary,
+                  background: isMe ? theme.gradients.primary : theme.colors.surfaceCard,
+                  color: isMe ? theme.colors.textDark : theme.colors.textPrimary,
                   border: isMe ? 'none' : `1px solid ${theme.colors.borderLight}`,
                   borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
                   padding: '9px 13px',
@@ -397,7 +419,7 @@ export default function CircleChatPage() {
               >
                 {m.text}
               </div>
-              <div style={{ fontSize: '9px', color: theme.colors.textMuted, marginTop: '2px' }}>
+              <div style={{ fontSize: '10px', color: theme.colors.textMuted, marginTop: '2px' }}>
                 {m.timestamp}
               </div>
             </div>
@@ -409,11 +431,12 @@ export default function CircleChatPage() {
       {/* Quick Suggestion Chips */}
       {!chatIsClosed && (
         <div
+          className="scroll-rail"
           style={{
             display: 'flex',
             gap: '6px',
             overflowX: 'auto',
-            paddingBottom: '8px',
+            paddingBottom: '4px',
             marginBottom: '8px',
           }}
         >
@@ -425,10 +448,11 @@ export default function CircleChatPage() {
                 flexShrink: 0,
                 background: 'rgba(255,255,255,0.05)',
                 border: `1px solid ${theme.colors.borderLight}`,
-                borderRadius: '16px',
+                borderRadius: '18px',
                 color: theme.colors.textSecondary,
-                padding: '5px 10px',
-                fontSize: '11px',
+                padding: '8px 12px',
+                minHeight: '36px',
+                fontSize: '12px',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
@@ -451,8 +475,10 @@ export default function CircleChatPage() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSend();
           }}
+          enterKeyHint="send"
           style={{
             flex: 1,
+            minWidth: 0,
             background: 'rgba(255,255,255,0.06)',
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: '10px',
@@ -466,7 +492,8 @@ export default function CircleChatPage() {
           id="btn-send-circle-chat"
           disabled={!inputMsg.trim() || chatIsClosed}
           onClick={() => handleSend()}
-          style={{ padding: '10px 18px', fontSize: '13px' }}
+          fullWidth={false}
+          style={{ padding: '10px 18px', fontSize: '14px', flexShrink: 0 }}
         >
           Send
         </PrimaryButton>
@@ -474,6 +501,7 @@ export default function CircleChatPage() {
 
       {/* Circle Tools / Actions Modal */}
       {showActionsModal && (
+        <Portal>
         <div
           style={{
             position: 'fixed',
@@ -490,7 +518,9 @@ export default function CircleChatPage() {
             style={{
               maxWidth: '440px',
               width: '100%',
-              padding: '24px',
+              padding: isMobile ? '20px' : '24px',
+              maxHeight: 'calc(100dvh - 40px)',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
@@ -502,12 +532,15 @@ export default function CircleChatPage() {
               </h3>
               <button
                 onClick={() => setShowActionsModal(false)}
+                aria-label="Close tools"
                 style={{
                   background: 'none',
                   border: 'none',
                   color: theme.colors.textMuted,
                   fontSize: '18px',
                   cursor: 'pointer',
+                  padding: '8px 10px',
+                  margin: '-8px -10px -8px 0',
                 }}
               >
                 ✕
@@ -587,10 +620,12 @@ export default function CircleChatPage() {
             </div>
           </SectionCard>
         </div>
+        </Portal>
       )}
 
       {/* Grow Modal */}
       {showGrowModal && (
+        <Portal>
         <div
           style={{
             position: 'fixed',
@@ -603,7 +638,7 @@ export default function CircleChatPage() {
             padding: '20px',
           }}
         >
-          <SectionCard style={{ maxWidth: '400px', width: '100%', padding: '24px' }}>
+          <SectionCard style={{ maxWidth: '400px', width: '100%', padding: isMobile ? '20px' : '24px', maxHeight: 'calc(100dvh - 40px)', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 10px', color: theme.colors.textPrimary, fontSize: '16px' }}>
               Grow Circle
             </h3>
@@ -644,10 +679,12 @@ export default function CircleChatPage() {
             </div>
           </SectionCard>
         </div>
+        </Portal>
       )}
 
       {/* Transfer Captain Modal */}
       {showTransferModal && (
+        <Portal>
         <div
           style={{
             position: 'fixed',
@@ -660,7 +697,7 @@ export default function CircleChatPage() {
             padding: '20px',
           }}
         >
-          <SectionCard style={{ maxWidth: '420px', width: '100%', padding: '24px' }}>
+          <SectionCard style={{ maxWidth: '420px', width: '100%', padding: isMobile ? '20px' : '24px', maxHeight: 'calc(100dvh - 40px)', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 10px', color: theme.colors.textPrimary, fontSize: '16px' }}>
               Transfer Captain Role
             </h3>
@@ -719,10 +756,12 @@ export default function CircleChatPage() {
             </div>
           </SectionCard>
         </div>
+        </Portal>
       )}
 
       {/* Switch Circle Modal with SwitchCircleControl */}
       {showSwitchModal && (
+        <Portal>
         <div
           style={{
             position: 'fixed',
@@ -735,7 +774,7 @@ export default function CircleChatPage() {
             padding: '20px',
           }}
         >
-          <SectionCard style={{ maxWidth: '460px', width: '100%', padding: '24px' }}>
+          <SectionCard style={{ maxWidth: '460px', width: '100%', padding: isMobile ? '20px' : '24px', maxHeight: 'calc(100dvh - 40px)', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
               <h3 style={{ margin: 0, color: theme.colors.textPrimary, fontSize: '17px' }}>
                 Switch Circle
@@ -770,6 +809,7 @@ export default function CircleChatPage() {
             </div>
           </SectionCard>
         </div>
+        </Portal>
       )}
     </div>
   );

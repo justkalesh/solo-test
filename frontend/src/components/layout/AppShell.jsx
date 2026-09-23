@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import NavBar from './NavBar';
 import Footer from './Footer';
 import FestiveBackdrop from '../effects/FestiveBackdrop';
-import BottomNav from './BottomNav';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from './BottomNav';
 import { useDeviceType } from '../../hooks/useDeviceType';
 
 /**
@@ -25,6 +25,10 @@ export function AppShell({ children }) {
         minHeight: '100vh',
         width: '100%',
         position: 'relative',
+        // Reserve room below the footer so the fixed BottomNav never covers page content
+        paddingBottom: isMobile
+          ? `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`
+          : 0,
       }}
     >
       {/* Viewport-responsive ambient glow & sparks */}
@@ -42,7 +46,6 @@ export function AppShell({ children }) {
           zIndex: 1,
           display: 'flex',
           flexDirection: 'column',
-          paddingBottom: isMobile ? '72px' : 0,
         }}
       >
         {children || <Outlet />}

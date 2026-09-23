@@ -62,6 +62,7 @@ export default function FindMyCirclePage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '620px',
         margin: '0 auto',
         padding: '20px 5vw 40px',
@@ -119,6 +120,8 @@ export default function FindMyCirclePage() {
             <input
               id="input-find-circle-phone"
               type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
               placeholder="e.g. 9876543210"
               maxLength={10}
               value={phone}
