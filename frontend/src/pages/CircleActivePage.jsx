@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import SectionCard from '../components/common/SectionCard';
@@ -15,6 +15,7 @@ import { useAppContext } from '../context/AppContext';
 import { useDeviceType } from '../hooks/useDeviceType';
 
 export function CircleActivePage() {
+  const theme = useTheme();
   const { circleId } = useParams();
   const navigate = useNavigate();
   const { user, activeCircle, setActiveCircle } = useAppContext();
@@ -190,7 +191,7 @@ export function CircleActivePage() {
             padding: '16px',
             borderRadius: '16px',
             border: `1.5px solid ${matchedLevel.color}`,
-            background: `linear-gradient(135deg, ${matchedLevel.bg}, #1F1938)`,
+            background: `linear-gradient(135deg, ${matchedLevel.bg}, ${theme.colors.cardBgEnd})`,
             boxShadow: `0 8px 30px -4px ${matchedLevel.color}55`,
             color: theme.colors.textPrimary,
             cursor: 'pointer',

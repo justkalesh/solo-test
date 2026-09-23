@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
@@ -10,6 +10,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import { apiRequest } from '../api/apiClient';
 
 export default function OrganizerDashboardPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const token = sessionStorage.getItem('organizer_token');
   const storedVenueId = sessionStorage.getItem('organizer_venue_id') || '';

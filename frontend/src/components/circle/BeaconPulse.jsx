@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * BeaconPulse — SoloSaathi Circle
@@ -18,6 +18,7 @@ export function BeaconPulse({
   anchorPoint = 'Anchor Landmark',
   onClose,
 }) {
+  const theme = useTheme();
   const [isFast, setIsFast] = useState(false);
 
   // Match skill level color

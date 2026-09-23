@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
@@ -34,6 +34,7 @@ const QUICK_CHIPS = [
 const SOS_WHATSAPP = '911234567890';
 
 export default function CircleChatPage() {
+  const theme = useTheme();
   const { circleId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();

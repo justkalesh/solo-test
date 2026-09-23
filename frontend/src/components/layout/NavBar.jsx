@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import theme from '../../styles/theme';
+import { useTheme, useThemeMode } from '../../context/ThemeContext';
 import headerLogo from '../../assets/logo/Header.png';
 import { GhostButton } from '../common/GhostButton';
 import { useAppContext } from '../../context/AppContext';
@@ -13,10 +13,12 @@ import { useDeviceType } from '../../hooks/useDeviceType';
  * notification badge, and quick access navigation buttons.
  */
 export function NavBar() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount, selectedVenue, selectedCity } = useAppContext();
   const { isMobile } = useDeviceType();
+  const { mode, toggleTheme } = useThemeMode();
 
   return (
     <header
@@ -25,54 +27,13 @@ export function NavBar() {
         top: 0,
         zIndex: 40,
         width: '100%',
-        background: 'rgba(26, 22, 48, 0.88)',
+        background: theme.colors.surfaceNav,
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         borderBottom: theme.borders.subtle,
       }}
     >
-      {/* Top Event Status Bar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '6px 4vw',
-          maxWidth: theme.maxWidths.desktop,
-          margin: '0 auto',
-          fontSize: '11px',
-          color: theme.colors.textMuted,
-          borderBottom: '0.5px solid rgba(74, 59, 110, 0.4)',
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span>📍</span>
-          <span style={{ color: theme.colors.textPrimary, fontWeight: 500 }}>
-            {selectedVenue ? `${selectedVenue}, ${selectedCity}` : 'Ahmedabad'}
-          </span>
-        </span>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: theme.colors.liveGreen,
-            fontWeight: 600,
-          }}
-        >
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: theme.colors.liveGreen,
-              boxShadow: theme.shadows.glowLive,
-              display: 'inline-block',
-            }}
-          />
-          Navratri Live
-        </span>
-      </div>
+
 
       {/* Main Nav Content */}
       <nav
@@ -184,6 +145,28 @@ export function NavBar() {
           >
             📊 {isMobile ? 'Org' : 'Organizer'}
           </GhostButton>
+
+          {/* Dark/Light Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={mode === 'dark' ? 'Light mode' : 'Dark mode'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: isMobile ? '18px' : '20px',
+              padding: '6px',
+              borderRadius: '8px',
+              transition: theme.transitions.fast,
+              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {mode === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
       </nav>
     </header>

@@ -1,5 +1,5 @@
 import React from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { DiyaSticker } from '../effects/FestiveStickers';
 
 /**
@@ -9,13 +9,14 @@ import { DiyaSticker } from '../effects/FestiveStickers';
  * and festival community disclaimer.
  */
 export function Footer() {
+  const theme = useTheme();
   return (
     <footer
       style={{
         position: 'relative',
         zIndex: 1,
         borderTop: theme.borders.subtle,
-        background: 'linear-gradient(180deg, transparent 0%, #14101F 100%)',
+        background: `linear-gradient(180deg, transparent 0%, ${theme.colors.pageBgEnd} 100%)`,
         padding: '36px 4vw 40px',
         textAlign: 'center',
         marginTop: 'auto',
@@ -40,8 +41,8 @@ export function Footer() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: '0.5px solid rgba(255, 255, 255, 0.12)',
+            background: `${theme.colors.borderDefault}44`,
+            border: `0.5px solid ${theme.colors.borderDefault}`,
             borderRadius: '10px',
             padding: '7px 16px',
           }}
@@ -52,7 +53,7 @@ export function Footer() {
               fontFamily: theme.fonts.body,
               fontWeight: 600,
               fontSize: '12px',
-              color: '#FFF',
+              color: theme.colors.textPrimary,
               letterSpacing: '0.4px',
             }}
           >

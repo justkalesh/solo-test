@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -41,6 +41,7 @@ export function PaymentStep({
   onPaymentSuccess,
   onCancel,
 }) {
+  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState(null);

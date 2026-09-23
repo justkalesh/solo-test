@@ -1,5 +1,5 @@
 import React from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 import Badge from '../common/Badge';
 
 /**
@@ -15,6 +15,7 @@ export function CircleMemberList({
   maxCapacity = 24,
   level = 'intermediate',
 }) {
+  const theme = useTheme();
   const matchedLevel = theme.levels.find((l) => l.id === level) || theme.levels[1];
 
   return (

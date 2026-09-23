@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -22,6 +22,7 @@ export function OtpVerificationModal({
   onVerified,
   initialPhone = '',
 }) {
+  const theme = useTheme();
   const [phone, setPhone] = useState(initialPhone);
   const [code, setCode] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' | 'code'
@@ -137,7 +138,7 @@ export function OtpVerificationModal({
         style={{
           width: '100%',
           maxWidth: '400px',
-          background: 'linear-gradient(160deg, #2A2049, #1F1938)',
+          background: theme.gradients.cardNeutral,
           borderRadius: '20px',
           border: theme.borders.default,
           boxShadow: '0 16px 40px -10px rgba(0,0,0,0.8)',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
@@ -21,6 +21,7 @@ function normalizePhone(raw) {
 }
 
 export default function FindMyCirclePage() {
+  const theme = useTheme();
   const [phone, setPhone] = useState(sessionStorage.getItem('user_mobile') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

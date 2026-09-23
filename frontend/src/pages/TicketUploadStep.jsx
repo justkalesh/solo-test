@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import GhostButton from '../components/common/GhostButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -57,6 +57,7 @@ export function TicketUploadStep({
   requirePhoto = false,
   onChange,
 }) {
+  const theme = useTheme();
   const [mode, setMode] = useState(requirePhoto || ticketPhoto ? 'photo' : 'serial');
   const [loadingOcr, setLoadingOcr] = useState(false);
   const [ocrData, setOcrData] = useState(null);

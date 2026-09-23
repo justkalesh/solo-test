@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import GhostButton from '../components/common/GhostButton';
 import Badge from '../components/common/Badge';
@@ -57,6 +57,7 @@ const DEFAULT_NOTIFICATIONS = [
 ];
 
 export default function NotificationsPage() {
+  const theme = useTheme();
   const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
 
   const markAllAsRead = () => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * GhostButton — SoloSaathi Circle
@@ -19,6 +19,7 @@ export function GhostButton({
   active = false,
   ...props
 }) {
+  const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
 
@@ -38,15 +39,15 @@ export function GhostButton({
       ? `0.5px solid ${theme.colors.amber}aa`
       : theme.borders.default,
     background: active
-      ? '#2E2448'
+      ? `${theme.colors.amber}18`
       : isHovered
-      ? '#2C224B'
+      ? `${theme.colors.amber}0D`
       : theme.colors.surfaceElevated,
     color: active
       ? theme.colors.textPrimary
       : isHovered
       ? theme.colors.textPrimary
-      : '#C9BFE0',
+      : theme.colors.textMuted,
     cursor: disabled ? 'not-allowed' : 'pointer',
     width: fullWidth ? '100%' : 'auto',
     boxSizing: 'border-box',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
@@ -66,6 +66,7 @@ function distanceKm(lat1, lng1, lat2, lng2) {
 }
 
 export default function VenuesPage() {
+  const theme = useTheme();
   const [selectedCity, setSelectedCity] = useState('All');
   const [userLocation, setUserLocation] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
