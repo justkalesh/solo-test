@@ -1,16 +1,17 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme, useThemeMode } from '../../context/ThemeContext';
-import headerLogo from '../../assets/logo/Header.png';
+import headerLogo from '../../assets/logo/Logo_Name.png';
 import { GhostButton } from '../common/GhostButton';
 import { useAppContext } from '../../context/AppContext';
 import { useDeviceType } from '../../hooks/useDeviceType';
+import { Sun, Moon, Bell, LayoutDashboard, MapPin, Search } from 'lucide-react';
 
 /**
  * NavBar — SoloSaathi Circle
  *
- * Top navigation bar featuring the brand logo mark, active venue indicator,
- * notification badge, and quick access navigation buttons.
+ * Top navigation bar. On mobile, shows only logo + theme toggle
+ * (all other nav moved to BottomNav). On desktop, full navigation.
  */
 export function NavBar() {
   const theme = useTheme();
@@ -27,14 +28,12 @@ export function NavBar() {
         top: 0,
         zIndex: 40,
         width: '100%',
-        background: theme.colors.surfaceNav,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        background: theme.colors.surfaceNav || 'rgba(26, 22, 48, 0.96)',
         borderBottom: theme.borders.subtle,
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
       }}
     >
-
-
       {/* Main Nav Content */}
       <nav
         style={{
@@ -59,15 +58,20 @@ export function NavBar() {
           }}
           aria-label="SoloSaathi Circle Home"
         >
+          {/* The artwork has wide transparent margins; on mobile it is cropped with
+              objectFit: cover so the wordmark stays legible inside the compact header. */}
           <img
             src={headerLogo}
             alt="SoloSaathi Circle"
             style={{
-              height: isMobile ? '32px' : '38px',
-              maxWidth: isMobile ? '160px' : '200px',
-              width: 'auto',
-              objectFit: 'contain',
+              height: '42px',
+              width: isMobile ? '170px' : 'auto',
+              maxWidth: isMobile ? '50vw' : '260px',
+              objectFit: isMobile ? 'cover' : 'contain',
+              objectPosition: 'center 56%',
               display: 'block',
+              // 'screen' only helps on dark surfaces; on the light navbar it washes the logo out
+              mixBlendMode: mode === 'dark' ? 'screen' : 'normal',
             }}
           />
         </Link>
@@ -81,91 +85,102 @@ export function NavBar() {
             flexWrap: 'nowrap',
           }}
         >
-          <GhostButton
-            onClick={() => navigate('/find-circle')}
-            active={location.pathname === '/find-circle'}
-            style={{ padding: isMobile ? '7px 10px' : '8px 14px', fontSize: isMobile ? '11.5px' : '12.5px' }}
-          >
-            Find Circle
-          </GhostButton>
-
-          <GhostButton
-            onClick={() => navigate('/notifications')}
-            active={location.pathname === '/notifications'}
-            style={{
-              position: 'relative',
-              padding: isMobile ? '7px 10px' : '8px 12px',
-              minWidth: isMobile ? '34px' : '38px',
-            }}
-            aria-label="Notifications"
-          >
-            <span>🔔</span>
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-4px',
-                  right: '-4px',
-                  background: theme.colors.magenta,
-                  color: '#FFF',
-                  borderRadius: '50%',
-                  width: '15px',
-                  height: '15px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 0 6px #DB2777',
-                }}
-              >
-                {unreadCount}
-              </span>
-            )}
-          </GhostButton>
-
+          {/* Desktop-only nav buttons */}
           {!isMobile && (
-            <GhostButton
-              onClick={() => navigate('/venues')}
-              active={location.pathname === '/venues'}
-            >
-              Venues
-            </GhostButton>
+            <>
+              <GhostButton
+                onClick={() => navigate('/find-circle')}
+                active={location.pathname === '/find-circle'}
+                style={{ padding: '8px 14px', fontSize: '12.5px' }}
+                icon={<Search size={14} />}
+              >
+                Find Circle
+              </GhostButton>
+
+              <GhostButton
+                onClick={() => navigate('/notifications')}
+                active={location.pathname === '/notifications'}
+                style={{
+                  position: 'relative',
+                  padding: '8px 12px',
+                  minWidth: '38px',
+                }}
+                aria-label="Notifications"
+              >
+                <Bell size={16} />
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: theme.colors.magenta,
+                      color: '#FFF',
+                      borderRadius: '50%',
+                      width: '15px',
+                      height: '15px',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 0 6px #DB2777',
+                    }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </GhostButton>
+
+              <GhostButton
+                onClick={() => navigate('/venues')}
+                active={location.pathname === '/venues'}
+                icon={<MapPin size={14} />}
+              >
+                Venues
+              </GhostButton>
+
+              <GhostButton
+                onClick={() => navigate('/organizer')}
+                active={location.pathname === '/organizer'}
+                style={{
+                  borderColor: `${theme.colors.amber}55`,
+                  color: theme.colors.amber,
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
+                }}
+                icon={<LayoutDashboard size={14} color={theme.colors.amber} />}
+              >
+                Organizer
+              </GhostButton>
+            </>
           )}
 
-          <GhostButton
-            onClick={() => navigate('/organizer')}
-            active={location.pathname === '/organizer'}
-            style={{
-              borderColor: `${theme.colors.amber}55`,
-              color: theme.colors.amber,
-              padding: isMobile ? '7px 10px' : '8px 14px',
-              fontSize: isMobile ? '11.5px' : '12.5px',
-            }}
-          >
-            📊 {isMobile ? 'Org' : 'Organizer'}
-          </GhostButton>
-
-          {/* Dark/Light Mode Toggle */}
+          {/* Dark/Light Mode Toggle — shown on both mobile & desktop */}
           <button
             onClick={toggleTheme}
             aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             title={mode === 'dark' ? 'Light mode' : 'Dark mode'}
             style={{
               background: 'none',
-              border: 'none',
+              border: `1px solid ${theme.colors.borderDefault}`,
               cursor: 'pointer',
-              fontSize: isMobile ? '18px' : '20px',
-              padding: '6px',
-              borderRadius: '8px',
+              padding: '7px',
+              minWidth: '40px',
+              minHeight: '40px',
+              borderRadius: '10px',
               transition: theme.transitions.fast,
               lineHeight: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: theme.colors.textSecondary,
             }}
           >
-            {mode === 'dark' ? '☀️' : '🌙'}
+            {mode === 'dark'
+              ? <Sun size={16} color={theme.colors.amber} />
+              : <Moon size={16} color={theme.colors.violet} />
+            }
           </button>
         </div>
       </nav>

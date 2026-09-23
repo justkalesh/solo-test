@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom';
 import NavBar from './NavBar';
 import Footer from './Footer';
 import FestiveBackdrop from '../effects/FestiveBackdrop';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from './BottomNav';
+import { useDeviceType } from '../../hooks/useDeviceType';
 
 /**
  * AppShell — Top-Level Application Frame
@@ -14,6 +16,7 @@ import FestiveBackdrop from '../effects/FestiveBackdrop';
  * 4. Production credits footer (`Footer`)
  */
 export function AppShell({ children }) {
+  const { isMobile } = useDeviceType();
   return (
     <div
       style={{
@@ -22,6 +25,10 @@ export function AppShell({ children }) {
         minHeight: '100vh',
         width: '100%',
         position: 'relative',
+        // Reserve room below the footer so the fixed BottomNav never covers page content
+        paddingBottom: isMobile
+          ? `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`
+          : 0,
       }}
     >
       {/* Viewport-responsive ambient glow & sparks */}
@@ -46,6 +53,9 @@ export function AppShell({ children }) {
 
       {/* Persistent Production Footer */}
       <Footer />
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <BottomNav />}
     </div>
   );
 }

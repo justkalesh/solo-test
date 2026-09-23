@@ -57,6 +57,7 @@ export default function OrganizerLoginPage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '460px',
         margin: '0 auto',
         padding: '40px 4vw 80px',
@@ -123,7 +124,16 @@ export default function OrganizerLoginPage() {
             />
             <div style={{ fontSize: '11px', color: theme.colors.textMuted, marginTop: '4px' }}>
               Format: City prefix + Venue code (e.g. <code>AH-GMDC</code>, <code>SR-VRSU</code>).{' '}
-              <Link to="/venues" style={{ color: theme.colors.gold, textDecoration: 'none' }}>
+              <Link
+                to="/venues"
+                style={{
+                  color: theme.colors.gold,
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                  padding: '10px 0',
+                  margin: '-10px 0',
+                }}
+              >
                 Lookup Venue Codes
               </Link>
             </div>

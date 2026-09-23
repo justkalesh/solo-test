@@ -13,7 +13,7 @@ const DEFAULT_NOTIFICATIONS = [
       'Navratri night winds down at 1:00 AM IST. Group chats will automatically archive for the night per festival ground guidelines.',
     time: '12:45 AM',
     tag: 'Safety Alert',
-    tagColor: theme.colors.gold,
+    tagColor: '#F5B301',
     unread: true,
     actionLink: '/find-circle',
     actionLabel: 'View Circle Pass',
@@ -37,7 +37,7 @@ const DEFAULT_NOTIFICATIONS = [
       'Live walk-up registrations and AI ticket verification are now live! Head to the SoloSaathi booth near Gate 2.',
     time: '6:30 PM',
     tag: 'Ground Notice',
-    tagColor: theme.colors.cyan,
+    tagColor: '#00C2D1',
     unread: false,
     actionLink: '/register',
     actionLabel: 'Register Walk-Up',
@@ -49,7 +49,7 @@ const DEFAULT_NOTIFICATIONS = [
       'Your pre-booked slot for peak Navratri night is locked. Circle matching completes 48 hours prior to the event.',
     time: 'Yesterday',
     tag: 'Booking',
-    tagColor: theme.colors.primary,
+    tagColor: '#7C3AED',
     unread: false,
     actionLink: '/find-circle',
     actionLabel: 'My Passes',
@@ -71,6 +71,7 @@ export default function NotificationsPage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '580px',
         margin: '0 auto',
         padding: '30px 4vw 80px',
@@ -82,10 +83,11 @@ export default function NotificationsPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '12px',
           marginBottom: '20px',
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h1
             style={{
               fontFamily: theme.fonts.heading,
@@ -104,7 +106,7 @@ export default function NotificationsPage() {
         {notifications.some((n) => n.unread) && (
           <GhostButton
             onClick={markAllAsRead}
-            style={{ padding: '6px 12px', fontSize: '11px', height: 'fit-content' }}
+            style={{ padding: '8px 12px', fontSize: '12px', minHeight: '36px', height: 'fit-content', flexShrink: 0 }}
           >
             Mark all read
           </GhostButton>
@@ -129,9 +131,9 @@ export default function NotificationsPage() {
               style={{
                 padding: '16px',
                 position: 'relative',
-                background: n.unread ? 'rgba(255,255,255,0.05)' : theme.colors.cardBackground,
+                background: n.unread ? theme.gradients.cardNeutral : theme.colors.surfaceElevated,
                 borderLeft: n.unread
-                  ? `4px solid ${n.tagColor || theme.colors.primary}`
+                  ? `4px solid ${n.tagColor || theme.colors.gold}`
                   : `1px solid ${theme.colors.borderLight}`,
               }}
             >
@@ -143,10 +145,10 @@ export default function NotificationsPage() {
                   marginBottom: '8px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       color: n.tagColor || theme.colors.gold,
                       background: 'rgba(255,255,255,0.06)',
                       border: `1px solid ${n.tagColor || theme.colors.gold}`,
@@ -161,12 +163,17 @@ export default function NotificationsPage() {
                 </div>
                 <button
                   onClick={() => clearNotification(n.id)}
+                  aria-label="Dismiss notification"
                   style={{
                     background: 'none',
                     border: 'none',
                     color: theme.colors.textMuted,
                     cursor: 'pointer',
                     fontSize: '14px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    margin: '-10px -10px 0 0',
+                    flexShrink: 0,
                   }}
                   title="Dismiss"
                 >
@@ -196,10 +203,13 @@ export default function NotificationsPage() {
               </p>
 
               {n.actionLink && (
-                <Link to={n.actionLink} style={{ textDecoration: 'none' }}>
+                <Link
+                  to={n.actionLink}
+                  style={{ textDecoration: 'none', display: 'inline-block', padding: '10px 0', margin: '-10px 0' }}
+                >
                   <span
                     style={{
-                      fontSize: '12px',
+                      fontSize: '13px',
                       fontWeight: 600,
                       color: theme.colors.gold,
                       display: 'inline-flex',

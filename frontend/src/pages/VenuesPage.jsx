@@ -5,6 +5,8 @@ import SectionCard from '../components/common/SectionCard';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import Badge from '../components/common/Badge';
+import { useDeviceType } from '../hooks/useDeviceType';
+import { MapPin, Navigation, Sparkles } from 'lucide-react';
 
 /**
  * Partner venue directory across India's top Garba cities
@@ -67,6 +69,7 @@ function distanceKm(lat1, lng1, lat2, lng2) {
 
 export default function VenuesPage() {
   const theme = useTheme();
+  const { isMobile } = useDeviceType();
   const [selectedCity, setSelectedCity] = useState('All');
   const [userLocation, setUserLocation] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -130,56 +133,66 @@ export default function VenuesPage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '840px',
         margin: '0 auto',
-        padding: '30px 4vw 80px',
+        padding: isMobile ? '20px 4vw 40px' : '30px 4vw 80px',
         minHeight: '85vh',
       }}
     >
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <div style={{ fontSize: '36px', marginBottom: '8px' }}>🎪</div>
+        <div style={{
+          width: '48px', height: '48px', borderRadius: '14px',
+          background: 'rgba(0,194,209,0.12)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px',
+        }}>
+          <MapPin size={24} color={theme.colors.cyan} />
+        </div>
         <h1
           style={{
             fontFamily: theme.fonts.heading,
-            fontSize: '24px',
+            fontSize: isMobile ? '22px' : '24px',
             color: theme.colors.textPrimary,
             marginBottom: '8px',
           }}
         >
           Partner Festival Grounds
         </h1>
-        <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.5 }}>
-          Authorized festival venues across Gujarat & India with active SoloSaathi matching circles,
-          anchors, and verified organizer check-in desks.
+        <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.5, maxWidth: '420px', margin: '0 auto' }}>
+          Authorized festival venues across Gujarat & India with active SoloSaathi matching circles.
         </p>
       </div>
 
       {/* GPS Location Finder bar */}
-      <SectionCard style={{ padding: '16px 20px', marginBottom: '24px' }}>
+      <SectionCard style={{ padding: isMobile ? '14px 16px' : '16px 20px', marginBottom: '20px' }}>
         <div
           style={{
             display: 'flex',
-            flexWrap: 'wrap',
+            flexDirection: isMobile ? 'column' : 'row',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: isMobile ? 'stretch' : 'center',
             gap: '12px',
           }}
         >
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textPrimary }}>
-              📍 Find Closest Ground
-            </div>
-            <div style={{ fontSize: '11px', color: theme.colors.textMuted }}>
-              Check GPS distance to see which Garba ground is nearest to your current location.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Navigation size={16} color={theme.colors.cyan} style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textPrimary }}>
+                Find Closest Ground
+              </div>
+              <div style={{ fontSize: '11px', color: theme.colors.textMuted }}>
+                GPS distance to nearest Garba ground.
+              </div>
             </div>
           </div>
           <PrimaryButton
             id="btn-venues-locate-me"
             loading={geoLoading}
             onClick={handleLocateMe}
-            style={{ padding: '8px 16px', fontSize: '12px' }}
+            fullWidth={isMobile}
+            style={{ padding: isMobile ? '12px 16px' : '8px 16px', fontSize: isMobile ? '14px' : '12px' }}
           >
-            {userLocation ? '✓ GPS Located' : 'Find Venues Near Me'}
+            {userLocation ? '✓ GPS Located' : 'Find Near Me'}
           </PrimaryButton>
         </div>
 
@@ -199,7 +212,7 @@ export default function VenuesPage() {
               color: theme.colors.gold,
             }}
           >
-            ✨ Nearest Ground:{' '}
+            <Sparkles size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} color={theme.colors.gold} /> Nearest Ground:{' '}
             <strong>
               {nearestVenue.name} ({nearestVenue.city})
             </strong>{' '}
@@ -210,6 +223,7 @@ export default function VenuesPage() {
 
       {/* City Filter Pills */}
       <div
+        className="scroll-rail"
         style={{
           display: 'flex',
           gap: '8px',
@@ -226,15 +240,17 @@ export default function VenuesPage() {
               flexShrink: 0,
               background:
                 selectedCity === c
-                  ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})`
+                  ? `linear-gradient(135deg, ${theme.colors.gold}, ${theme.colors.amber})`
                   : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${selectedCity === c ? 'transparent' : theme.colors.borderLight}`,
+              border: `1px solid ${selectedCity === c ? 'transparent' : theme.colors.borderDefault}`,
               borderRadius: '20px',
-              color: selectedCity === c ? theme.colors.textPrimary : theme.colors.textSecondary,
-              padding: '6px 14px',
-              fontSize: '12px',
+              color: selectedCity === c ? '#14101F' : theme.colors.textSecondary,
+              padding: '6px 16px',
+              minHeight: '40px',
+              fontSize: '13px',
               fontWeight: selectedCity === c ? 600 : 400,
               cursor: 'pointer',
+              transition: 'all 0.2s ease',
             }}
           >
             {c}
@@ -246,8 +262,8 @@ export default function VenuesPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: '16px',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: isMobile ? '12px' : '16px',
         }}
       >
         {filteredVenues.map((v) => {
@@ -275,7 +291,7 @@ export default function VenuesPage() {
                 >
                   <span
                     style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       color: theme.colors.cyan,
                       background: 'rgba(0,194,209,0.1)',
                       border: `1px solid ${theme.colors.cyan}`,
@@ -312,18 +328,18 @@ export default function VenuesPage() {
                       fontWeight: isNearest ? 600 : 400,
                     }}
                   >
-                    📍 ~{v.distanceKm.toFixed(1)} km from you {isNearest ? '• Nearest!' : ''}
+                    <MapPin size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} /> ~{v.distanceKm.toFixed(1)} km from you {isNearest ? '• Nearest!' : ''}
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginTop: '14px' }}>
                 <Link
                   to={`/register?city=${encodeURIComponent(v.city)}&venue=${encodeURIComponent(v.name)}`}
                   style={{ textDecoration: 'none', flex: 1 }}
                 >
-                  <PrimaryButton style={{ width: '100%', padding: '7px', fontSize: '11px' }}>
+                  <PrimaryButton style={{ width: '100%', padding: isMobile ? '12px' : '7px', fontSize: isMobile ? '14px' : '11px' }}>
                     Register Live
                   </PrimaryButton>
                 </Link>
@@ -331,7 +347,7 @@ export default function VenuesPage() {
                   to={`/advance?city=${encodeURIComponent(v.city)}&venue=${encodeURIComponent(v.name)}`}
                   style={{ textDecoration: 'none', flex: 1 }}
                 >
-                  <GhostButton style={{ width: '100%', padding: '7px', fontSize: '11px' }}>
+                  <GhostButton style={{ width: '100%', padding: isMobile ? '12px' : '7px', fontSize: isMobile ? '14px' : '11px' }}>
                     Book Advance
                   </GhostButton>
                 </Link>

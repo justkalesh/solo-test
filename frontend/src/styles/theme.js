@@ -132,10 +132,14 @@ export const lightTheme = deepFreeze({
     textDark: '#FFFFFF',
     textDisabled: '#B8A89A',
     textLabel: '#8B5E3C',
+    // For surfaces that stay dark in both themes (e.g. gradients.ctaCard)
+    textOnDark: '#FFF5EB',
+    textOnDarkMuted: '#D9CBBE',
 
     // Borders & Dividers
     borderDefault: '#E8D8C8',
     borderSubtle: '#F0E4D6',
+    borderLight: '#F0E4D6',
     borderFocus: '#D4900A',
     borderDanger: '#F43F5E',
   },
@@ -244,10 +248,13 @@ export const darkTheme = deepFreeze({
     textDark: '#1B1730',
     textDisabled: '#8A81A8',
     textLabel: '#B29CE0',
+    textOnDark: '#F3EDE0',
+    textOnDarkMuted: '#B9AFD1',
 
     // Borders & Dividers
     borderDefault: '#4A3B6E',
     borderSubtle: '#3A3257',
+    borderLight: '#3A3257',
     borderFocus: '#E3A542',
     borderDanger: '#F43F5E',
   },

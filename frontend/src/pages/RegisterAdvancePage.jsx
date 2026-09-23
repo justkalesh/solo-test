@@ -289,6 +289,8 @@ export function RegisterAdvancePage() {
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
                 maxLength={10}
                 value={whatsapp}
                 onChange={(e) => {
@@ -298,6 +300,7 @@ export function RegisterAdvancePage() {
                 placeholder="10-digit mobile"
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   boxSizing: 'border-box',
                   padding: '11px 12px',
                   borderRadius: '10px',
@@ -313,6 +316,7 @@ export function RegisterAdvancePage() {
                 active={isPhoneVerified}
                 style={{
                   padding: '11px 16px',
+                  flexShrink: 0,
                   color: isPhoneVerified ? theme.colors.liveGreen : theme.colors.amber,
                   borderColor: isPhoneVerified ? theme.colors.liveGreen : theme.colors.amber,
                 }}
@@ -507,7 +511,7 @@ export function RegisterAdvancePage() {
                 type="checkbox"
                 checked={allWomenToggle}
                 onChange={(e) => setAllWomenToggle(e.target.checked)}
-                style={{ accentColor: theme.colors.pink }}
+                style={{ accentColor: theme.colors.pink, width: '18px', height: '18px', flexShrink: 0 }}
               />
               <span style={{ fontSize: '12.5px' }}>🌸 Prefer <strong>All-Women Sakhi Circle</strong></span>
             </label>
@@ -530,7 +534,7 @@ export function RegisterAdvancePage() {
               type="checkbox"
               checked={captainOptIn}
               onChange={(e) => setCaptainOptIn(e.target.checked)}
-              style={{ accentColor: theme.colors.gold }}
+              style={{ accentColor: theme.colors.gold, width: '18px', height: '18px', flexShrink: 0 }}
             />
             <span style={{ fontSize: '12.5px' }}>👑 Volunteer to be <strong>Circle Captain</strong></span>
           </label>

@@ -62,33 +62,35 @@ export default function FindMyCirclePage() {
   return (
     <div
       style={{
+        width: '100%',
         maxWidth: '620px',
         margin: '0 auto',
-        padding: '30px 4vw 80px',
+        padding: '20px 5vw 40px',
         minHeight: '80vh',
+        overflowX: 'hidden',
       }}
     >
       {/* Title & Description */}
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '24px', padding: '0 2vw' }}>
         <div style={{ fontSize: '36px', marginBottom: '8px' }}>📍</div>
         <h1
           style={{
             fontFamily: theme.fonts.heading,
-            fontSize: '24px',
+            fontSize: 'clamp(20px, 5vw, 24px)',
             color: theme.colors.textPrimary,
             marginBottom: '8px',
+            wordBreak: 'break-word',
           }}
         >
           Find My Circle & Pass
         </h1>
-        <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.5 }}>
-          Enter your registered WhatsApp number to retrieve your active Navratri Circle, Color
-          Beacon, and Digital Entry Pass across all festival nights.
+        <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.5, maxWidth: '380px', margin: '0 auto' }}>
+          Enter your registered WhatsApp number to retrieve your Navratri Circle, Beacon, and Digital Entry Pass.
         </p>
       </div>
 
       {/* Phone input search card */}
-      <SectionCard style={{ padding: '20px', marginBottom: '24px' }}>
+      <SectionCard style={{ padding: '16px', marginBottom: '20px' }}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -99,17 +101,18 @@ export default function FindMyCirclePage() {
           <label style={{ fontSize: '12px', color: theme.colors.textSecondary, fontWeight: 500 }}>
             Registered Mobile Number
           </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 12px',
                 background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${theme.colors.borderLight}`,
+                border: `1px solid ${theme.colors.borderDefault}`,
                 borderRadius: '8px',
                 color: theme.colors.textMuted,
                 fontSize: '13px',
+                flexShrink: 0,
               }}
             >
               +91
@@ -117,6 +120,8 @@ export default function FindMyCirclePage() {
             <input
               id="input-find-circle-phone"
               type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
               placeholder="e.g. 9876543210"
               maxLength={10}
               value={phone}
@@ -126,24 +131,26 @@ export default function FindMyCirclePage() {
               }}
               style={{
                 flex: 1,
+                minWidth: '0',
                 background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${theme.colors.borderLight}`,
+                border: `1px solid ${theme.colors.borderDefault}`,
                 borderRadius: '8px',
                 padding: '10px 14px',
                 color: theme.colors.textPrimary,
                 fontSize: '14px',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
-            <PrimaryButton
-              id="btn-find-circle-search"
-              type="submit"
-              loading={loading}
-              style={{ padding: '10px 20px', fontSize: '13px' }}
-            >
-              Search
-            </PrimaryButton>
           </div>
+          <PrimaryButton
+            id="btn-find-circle-search"
+            type="submit"
+            loading={loading}
+            style={{ padding: '12px 20px', fontSize: '14px', width: '100%' }}
+          >
+            Search
+          </PrimaryButton>
         </form>
       </SectionCard>
 

@@ -288,7 +288,7 @@ export function CircleActivePage() {
         <div style={{ textAlign: 'center' }}>
           <GhostButton
             onClick={() => setShowSwitch(true)}
-            style={{ fontSize: '12px', color: theme.colors.textMuted }}
+            style={{ fontSize: '12px', minHeight: '40px', color: theme.colors.textMuted }}
           >
             🔄 Need a different rhythm? Switch Circle
           </GhostButton>
