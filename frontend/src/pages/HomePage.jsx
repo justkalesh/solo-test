@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logo/Logo.png';
+import logoSquareImg from '../assets/logo/Logo_Square.png';
+import logoNameImg from '../assets/logo/Logo_Name.png';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { GhostButton } from '../components/common/GhostButton';
 import { Badge } from '../components/common/Badge';
@@ -24,6 +26,7 @@ import { useDeviceType } from '../hooks/useDeviceType';
  * exact design system tokens, and zero layout thrashing.
  */
 export function HomePage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { isMobile, isDesktop } = useDeviceType();
   const [activeLevelPreview, setActiveLevelPreview] = useState('intermediate');
@@ -105,19 +108,33 @@ export function HomePage() {
           style={{
             margin: '8px 0 16px',
             display: 'flex',
-            justifyContent: 'center',
+            flexDirection: 'column',
             alignItems: 'center',
+            gap: '0px',
           }}
         >
+          {/* Rotating Firework Mark */}
           <img
             src={logoImg}
             alt="SoloSaathi Circle Logo"
             style={{
-              height: isMobile ? '180px' : '220px',
+              height: isMobile ? '80px' : '100px',
               width: 'auto',
               objectFit: 'contain',
               display: 'block',
-              filter: 'drop-shadow(0 8px 24px rgba(245, 179, 1, 0.2))',
+              filter: 'drop-shadow(0 4px 16px rgba(245, 179, 1, 0.15))',
+              animation: 'spin 8s linear infinite',
+            }}
+          />
+          {/* Brand Name + Tagline (static) */}
+          <img
+            src={logoNameImg}
+            alt="Solo Saathi Circle - Real-Time Group Match Making"
+            style={{
+              height: isMobile ? '90px' : '110px',
+              width: 'auto',
+              objectFit: 'contain',
+              display: 'block',
             }}
           />
         </div>
@@ -625,7 +642,7 @@ export function HomePage() {
       >
         <SectionCard
           style={{
-            background: 'linear-gradient(160deg, #2A1D44, #18122B)',
+            background: theme.gradients.ctaCard,
             borderColor: `${theme.colors.gold}44`,
             padding: isMobile ? '28px 20px' : '36px 32px',
             position: 'relative',

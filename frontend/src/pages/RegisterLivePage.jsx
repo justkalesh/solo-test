@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import SectionCard from '../components/common/SectionCard';
@@ -25,6 +25,7 @@ const VENUES_BY_CITY = {
 const AGE_BANDS = ['18-24', '25-34', '35-44', '45+'];
 
 export function RegisterLivePage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { setUser, setActiveCircle } = useAppContext();
   const { isMobile } = useDeviceType();

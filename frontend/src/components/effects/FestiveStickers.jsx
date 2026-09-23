@@ -1,5 +1,4 @@
 import React from 'react';
-import theme from '../../styles/theme';
 
 /**
  * FestiveStickers — Navratri & Garba Decorative Vector Motifs
@@ -95,7 +94,7 @@ export function StringLightsSticker({ size = 80, style = {}, className = '', ...
       {/* Catenary Wire */}
       <path
         d="M2 10 Q25 24 50 12 T98 14"
-        stroke="#4A3B6E"
+        stroke="#E8D8C8"
         strokeWidth="1.5"
         fill="none"
       />
@@ -175,7 +174,7 @@ export function DholakSticker({ size = 52, style = {}, className = '', ...props 
         <linearGradient id="ss_dholak_body" x1="10" y1="16" x2="54" y2="48" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#E3A542" />
           <stop offset="50%" stopColor="#DB2777" />
-          <stop offset="100%" stopColor="#241D42" />
+          <stop offset="100%" stopColor="#3D2415" />
         </linearGradient>
       </defs>
       {/* Drum Barrel */}
@@ -186,9 +185,9 @@ export function DholakSticker({ size = 52, style = {}, className = '', ...props 
         strokeWidth="1.2"
       />
       {/* Left Drum Head */}
-      <ellipse cx="14" cy="32" rx="4" ry="12" fill="#241D3D" stroke="#E3A542" strokeWidth="1.2" />
+      <ellipse cx="14" cy="32" rx="4" ry="12" fill="#3D2415" stroke="#E3A542" strokeWidth="1.2" />
       {/* Right Drum Head */}
-      <ellipse cx="50" cy="32" rx="4" ry="12" fill="#241D3D" stroke="#E3A542" strokeWidth="1.2" />
+      <ellipse cx="50" cy="32" rx="4" ry="12" fill="#3D2415" stroke="#E3A542" strokeWidth="1.2" />
       {/* Tuning Ropes (V-Pattern) */}
       <path
         d="M16 22 L32 46 L48 22 M16 42 L32 18 L48 42"

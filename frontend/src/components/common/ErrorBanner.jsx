@@ -1,5 +1,5 @@
 import React from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * ErrorBanner — SoloSaathi Circle
@@ -14,6 +14,7 @@ export function ErrorBanner({
   style = {},
   className = '',
 }) {
+  const theme = useTheme();
   if (!message) return null;
 
   return (
@@ -21,7 +22,7 @@ export function ErrorBanner({
       role="alert"
       style={{
         position: 'relative',
-        background: 'linear-gradient(160deg, #2E1420, #1F1938)',
+        background: theme.gradients.cardAdvanced,
         border: theme.borders.advanced,
         borderRadius: '12px',
         padding: '12px 16px',

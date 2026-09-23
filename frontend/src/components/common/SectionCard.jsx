@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * SectionCard — SoloSaathi Circle
@@ -19,6 +19,7 @@ export function SectionCard({
   onClick = null,
   ...props
 }) {
+  const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
 
   // Determine gradient background and border based on level

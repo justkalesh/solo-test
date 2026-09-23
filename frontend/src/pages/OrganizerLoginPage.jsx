@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
@@ -8,6 +8,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import { postRequest } from '../api/apiClient';
 
 export default function OrganizerLoginPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [venueId, setVenueId] = useState(sessionStorage.getItem('organizer_venue_id') || '');
   const [password, setPassword] = useState('');

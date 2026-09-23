@@ -1,5 +1,5 @@
 import React from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Badge — SoloSaathi Circle
@@ -17,6 +17,7 @@ export function Badge({
   className = '',
   ...props
 }) {
+  const theme = useTheme();
   const isSmall = size === 'sm';
 
   const badgeStyle = {

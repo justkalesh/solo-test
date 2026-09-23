@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 import PrimaryButton from '../common/PrimaryButton';
 import GhostButton from '../common/GhostButton';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -22,6 +22,7 @@ export function SwitchCircleControl({
   onSwitchSuccess,
   onClose,
 }) {
+  const theme = useTheme();
   const [targetLevel, setTargetLevel] = useState(currentLevel);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -56,7 +57,7 @@ export function SwitchCircleControl({
   return (
     <div
       style={{
-        background: 'linear-gradient(160deg, #2A2049, #1F1938)',
+        background: theme.gradients.cardNeutral,
         borderRadius: '16px',
         border: theme.borders.default,
         padding: '20px',

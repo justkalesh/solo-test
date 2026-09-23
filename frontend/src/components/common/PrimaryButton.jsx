@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * PrimaryButton — SoloSaathi Circle
@@ -18,6 +18,7 @@ export function PrimaryButton({
   type = 'button',
   ...props
 }) {
+  const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
   const [isActive, setIsActive] = useState(false);
 

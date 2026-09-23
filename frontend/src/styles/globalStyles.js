@@ -1,14 +1,16 @@
 import React from 'react';
-import theme from './theme';
+import { lightTheme } from './theme';
 
 /**
  * SoloSaathi Circle — Global CSS & Font Injection
  *
  * Injected once at the root of the application (App.jsx / main.jsx).
  * Enforces CSS resets, font smoothing, box-sizing, and GPU keyframes.
+ * Accepts a theme parameter for dynamic dark/light mode support.
  */
 
-export const globalCssString = `
+export function buildGlobalCss(theme) {
+  return `
   @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
   *, *::before, *::after {
@@ -31,6 +33,7 @@ export const globalCssString = `
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   #root {
@@ -43,7 +46,7 @@ export const globalCssString = `
 
   /* Accessible focus rings */
   button:focus-visible, a:focus-visible, input:focus-visible {
-    outline: 2px solid ${theme.colors.amber};
+    outline: 2px solid ${theme.colors.borderFocus};
     outline-offset: 2px;
   }
 
@@ -63,7 +66,7 @@ export const globalCssString = `
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: ${theme.colors.surfaceDark};
+    background: ${theme.colors.pageBgEnd};
   }
   ::-webkit-scrollbar-thumb {
     background: ${theme.colors.borderDefault};
@@ -100,9 +103,14 @@ export const globalCssString = `
     50% { opacity: 0.9; transform: scale(1.2); }
   }
 `;
+}
 
-export function GlobalStyles() {
-  return React.createElement('style', null, globalCssString);
+// Pre-built CSS string for backward compat (uses light theme)
+export const globalCssString = buildGlobalCss(lightTheme);
+
+export function GlobalStyles({ theme }) {
+  const css = theme ? buildGlobalCss(theme) : globalCssString;
+  return React.createElement('style', null, css);
 }
 
 export default GlobalStyles;

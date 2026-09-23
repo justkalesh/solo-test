@@ -1,5 +1,5 @@
 import React from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * LoadingSpinner — SoloSaathi Circle
@@ -9,11 +9,13 @@ import theme from '../../styles/theme';
  */
 export function LoadingSpinner({
   size = 32,
-  color = theme.colors.amber,
+  color = null,
   label = null,
   style = {},
   className = '',
 }) {
+  const theme = useTheme();
+  const resolvedColor = color || theme.colors.amber;
   const spinnerSize = typeof size === 'number' ? size : 32;
 
   return (
@@ -36,7 +38,7 @@ export function LoadingSpinner({
           height: spinnerSize,
           borderRadius: '50%',
           border: `2.5px solid ${theme.colors.borderSubtle}`,
-          borderTopColor: color,
+          borderTopColor: resolvedColor,
           borderRightColor: theme.colors.pink,
           animation: 'spin 0.8s linear infinite',
           boxSizing: 'border-box',

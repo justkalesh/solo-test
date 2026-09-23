@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import theme from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * FestiveBackdrop — SoloSaathi Circle
@@ -10,6 +10,8 @@ import theme from '../../styles/theme';
  * to strictly prevent any interaction blockage.
  */
 export function FestiveBackdrop({ density = 28 }) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
   // Generate deterministic spark coordinates so re-renders don't cause flicker
   const sparks = useMemo(() => {
     const list = [];
@@ -56,7 +58,9 @@ export function FestiveBackdrop({ density = 28 }) {
           left: '-15%',
           width: 'clamp(280px, 65vw, 680px)',
           height: 'clamp(240px, 50vh, 520px)',
-          background: 'radial-gradient(circle, #DB27772E 0%, #DB277708 50%, transparent 70%)',
+          background: isDark
+            ? 'radial-gradient(circle, #DB27772E 0%, #DB277708 50%, transparent 70%)'
+            : 'radial-gradient(circle, #DB27770E 0%, #DB277704 50%, transparent 70%)',
           filter: 'blur(clamp(25px, 6vw, 60px))',
           willChange: 'transform',
           transform: 'translate3d(0,0,0)',
@@ -71,7 +75,9 @@ export function FestiveBackdrop({ density = 28 }) {
           right: '-20%',
           width: 'clamp(300px, 60vw, 640px)',
           height: 'clamp(260px, 55vh, 560px)',
-          background: 'radial-gradient(circle, #E3A54228 0%, #E3A54206 50%, transparent 70%)',
+          background: isDark
+            ? 'radial-gradient(circle, #E3A54228 0%, #E3A54206 50%, transparent 70%)'
+            : 'radial-gradient(circle, #E3A54210 0%, #E3A54203 50%, transparent 70%)',
           filter: 'blur(clamp(25px, 6vw, 60px))',
           willChange: 'transform',
           transform: 'translate3d(0,0,0)',
@@ -86,7 +92,9 @@ export function FestiveBackdrop({ density = 28 }) {
           left: '15%',
           width: 'clamp(320px, 70vw, 700px)',
           height: 'clamp(220px, 45vh, 480px)',
-          background: 'radial-gradient(circle, #00C2D11E 0%, #00C2D104 50%, transparent 70%)',
+          background: isDark
+            ? 'radial-gradient(circle, #00C2D11E 0%, #00C2D104 50%, transparent 70%)'
+            : 'radial-gradient(circle, #00C2D10C 0%, #00C2D102 50%, transparent 70%)',
           filter: 'blur(clamp(30px, 7vw, 70px))',
           willChange: 'transform',
           transform: 'translate3d(0,0,0)',
@@ -102,7 +110,9 @@ export function FestiveBackdrop({ density = 28 }) {
           transform: 'translate(-50%, -50%)',
           width: 'clamp(350px, 75vw, 800px)',
           height: 'clamp(350px, 75vh, 800px)',
-          background: 'radial-gradient(circle, #7C3AED12 0%, transparent 65%)',
+          background: isDark
+            ? 'radial-gradient(circle, #7C3AED12 0%, transparent 65%)'
+            : 'radial-gradient(circle, #7C3AED08 0%, transparent 65%)',
           filter: 'blur(clamp(40px, 8vw, 80px))',
           willChange: 'transform',
         }}
@@ -120,8 +130,8 @@ export function FestiveBackdrop({ density = 28 }) {
             height: `${s.size}px`,
             borderRadius: '50%',
             background: s.c,
-            opacity: 0.55,
-            boxShadow: `0 0 6px ${s.c}`,
+            opacity: theme.sparkOpacity,
+            boxShadow: isDark ? `0 0 6px ${s.c}` : `0 0 4px ${s.c}44`,
             animation: `sparklePulse ${s.duration}s ease-in-out ${s.delay}s infinite`,
             willChange: 'transform, opacity',
           }}

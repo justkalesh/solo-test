@@ -280,3 +280,132 @@ To ensure high-speed reliability during the 6:30 PM festival entrance rush when 
 2. **Illustrated Sticker Artwork**: The Navratri sticker motifs in `FestiveStickers.jsx` are currently clean vector SVGs; high-resolution custom illustrated `.webp` artwork from the creative studio can be swapped in directly via `frontend/src/assets/stickers/`.
 3. **SMS OTP Fallback UI**: The client currently routes OTP requests through the backend's primary WhatsApp path. If SMS fallback provider integration is connected in the backend later, an SMS fallback toggle button can be exposed in `OtpVerificationModal.jsx`.
 
+---
+
+## Phase 3: Theme System, Logo Layout & NavBar Polish — September 23, 2026
+
+### Plain-English Summary
+
+Phase 3 introduces a complete dark/light theme system, redesigns the hero logo layout to match the approved visual reference, and cleans up the navigation bar. No backend changes were made; all work is purely client-side.
+
+---
+
+### 1. Dual Theme Architecture (`ThemeContext`)
+
+**Problem**: All 26 component and page files imported `theme` as a static object from `frontend/src/styles/theme.js`. There was no mechanism for users to toggle between dark and light themes at runtime.
+
+**Solution**: A new React Context (`ThemeContext.jsx`) wraps the entire application. Every component now consumes the active theme via a `useTheme()` hook rather than a static import.
+
+#### New File: `frontend/src/context/ThemeContext.jsx`
+
+| Export | Type | Purpose |
+|:---|:---|:---|
+| `ThemeProvider` | Component | Wraps `<App>`, manages `mode` state (`'light'` or `'dark'`), persists to `localStorage` key `solosaathi_theme` |
+| `useTheme()` | Hook | Returns the active frozen theme object — drop-in replacement for the old static `theme` import |
+| `useThemeMode()` | Hook | Returns `{ mode, toggleTheme }` for toggle UI buttons |
+
+#### Rewritten File: `frontend/src/styles/theme.js`
+
+The theme file now exports two complete frozen theme objects sharing common brand tokens:
+
+| Export | Surface Colors | Text Colors | Use Case |
+|:---|:---|:---|:---|
+| `lightTheme` | `#FFF5EB` → `#FEF3E2` (warm cream) | `#2D1810` primary, `#6B5C4F` muted | Default; daytime preview, light-preference users |
+| `darkTheme` | `#241D42` → `#14101F` (deep purple) | `#F3EDE0` primary, `#B9AFD1` muted | Festival night ambience, dark-preference users |
+
+Shared tokens (identical in both): `accent.*` brand colors (gold, amber, pink, cyan, violet), `fonts.*`, `fontSizes.*`, `radii.*`, `spacing.*`, `maxWidths.*`, `transitions.*`, and action gradients.
+
+Theme-varying tokens: `colors.*` (surfaces, text, borders), `gradients.*` (page, cards, CTA), `borders.*`, `shadows.*`, `backdropOpacity`, `sparkOpacity`, and `levels[]` array (skill level card config).
+
+#### Rewritten File: `frontend/src/styles/globalStyles.js`
+
+The `buildGlobalCss(theme)` function generates the CSS reset, font imports, scrollbar styling, focus rings, and keyframe animations using the provided theme object. The `<GlobalStyles theme={theme} />` component is rendered inside `ThemedApp` to reactively update when the user toggles themes.
+
+#### Updated File: `frontend/src/App.jsx`
+
+```jsx
+<ThemeProvider>
+  <ThemedApp />   {/* calls useTheme() and passes it to <GlobalStyles> */}
+</ThemeProvider>
+```
+
+#### Migration: 26 Component/Page Files
+
+All files that previously contained `import theme from '../styles/theme'` (or `../../styles/theme`) were batch-migrated:
+- Import replaced with `import { useTheme } from '../context/ThemeContext'`
+- `const theme = useTheme();` added as the first line inside the component function body
+
+**Pages migrated (13):** `HomePage`, `RegisterLivePage`, `RegisterAdvancePage`, `FindMyCirclePage`, `CircleActivePage`, `CircleChatPage`, `NotificationsPage`, `OrganizerLoginPage`, `OrganizerDashboardPage`, `VenuesPage`, `OtpVerificationModal`, `PaymentStep`, `TicketUploadStep`.
+
+**Components migrated (13):** `Badge`, `ErrorBanner`, `GhostButton`, `LoadingSpinner`, `PrimaryButton`, `SectionCard`, `FestiveBackdrop`, `FestiveStickers`, `NavBar`, `Footer`, `BeaconPulse`, `CircleMemberList`, `SwitchCircleControl`.
+
+**Bug fixes during migration:**
+- `LoadingSpinner.jsx`: `color = theme.colors.amber` as a default parameter value caused `ReferenceError` because `useTheme()` runs inside the function body. Fixed by defaulting to `null` and resolving inside the function.
+- `VenuesPage.jsx`: The batch script incorrectly placed `useTheme()` inside the `getVenueId()` utility function (not a React component). Moved to the `VenuesPage()` component.
+- `FestiveStickers.jsx`: Import was added but the file doesn't use `theme` — removed the unused import.
+
+---
+
+### 2. Adaptive Visual Effects (`FestiveBackdrop`)
+
+The ambient glow blooms and spark field in `FestiveBackdrop.jsx` now respond to the active theme mode:
+- **Light mode**: Reduced glow alpha channels and `sparkOpacity: 0.2` for subtle warmth on cream backgrounds.
+- **Dark mode**: Increased glow alpha channels and `sparkOpacity: 0.55` for vivid festival night ambience.
+
+---
+
+### 3. Hero Logo Layout Redesign (`HomePage.jsx`)
+
+**Before**: A single large `Logo.png` image (180–220px) displaying only the firework mark, with no brand text visible.
+
+**After**: Two stacked images matching the approved visual reference:
+1. **`Logo.png`** (firework mark) — 80px mobile / 100px desktop, continuously rotating via CSS `spin 8s linear infinite`
+2. **`Logo_Name.png`** (brand text + tagline) — 90px mobile / 110px desktop, static
+
+New import added: `import logoNameImg from '../assets/logo/Logo_Name.png'`
+
+---
+
+### 4. NavBar Cleanup
+
+| Change | Detail |
+|:---|:---|
+| **Removed** | Top event status bar (`📍 {venue}, {city}` + `🟢 Navratri Live` pulse indicator) |
+| **Added** | Dark/light theme toggle button (🌙 / ☀️) at the end of the nav action buttons |
+| **Import** | Added `useThemeMode` from `ThemeContext` for toggle state management |
+
+The toggle button includes `aria-label` and `title` attributes for accessibility, switching between "Switch to light mode" and "Switch to dark mode".
+
+---
+
+### 5. Hardcoded Gradient Cleanup
+
+Several components still contained hardcoded light-theme hex gradients that wouldn't adapt on theme toggle. These were replaced with `theme.gradients.*` tokens:
+
+| File | Old Hardcoded Value | Replaced With |
+|:---|:---|:---|
+| `OtpVerificationModal.jsx` | `linear-gradient(160deg, #FFFFFF, #FFF9F0)` | `theme.gradients.cardNeutral` |
+| `SwitchCircleControl.jsx` | `linear-gradient(160deg, #FFFFFF, #FFF9F0)` | `theme.gradients.cardNeutral` |
+| `ErrorBanner.jsx` | `linear-gradient(160deg, #FFF0F2, #FFF9F0)` | `theme.gradients.cardAdvanced` |
+| `HomePage.jsx` (CTA card) | `linear-gradient(160deg, #3D2415, #2D1810)` | `theme.gradients.ctaCard` |
+| `CircleActivePage.jsx` (level card) | `#FFF9F0` hardcoded end color | `theme.colors.cardBgEnd` |
+
+---
+
+### Design System Reference — Updated Token Table
+
+The Phase 1 token table documented dark-theme values only. With the dual-theme system, each color/gradient token now resolves dynamically. Below are the **light theme** values (dark theme values remain as documented in Phase 1):
+
+| Token Path | Light Value | Dark Value | Description |
+|:---|:---|:---|:---|
+| `theme.colors.pageBgStart` | `#FFF5EB` | `#241D42` | Page background start |
+| `theme.colors.pageBgEnd` | `#FEF3E2` | `#14101F` | Page background end |
+| `theme.colors.surfaceCard` | `#FFFFFF` | `#1F1938` | Card surface fill |
+| `theme.colors.textPrimary` | `#2D1810` | `#F3EDE0` | Primary text |
+| `theme.colors.textMuted` | `#6B5C4F` | `#B9AFD1` | Secondary text |
+| `theme.colors.borderDefault` | `#E8D8C8` | `#4A3B6E` | Default borders |
+| `theme.gradients.page` | `radial-gradient(ellipse at top, #FFF5EB, #FEF3E2 70%)` | `radial-gradient(ellipse at top, #241D42, #14101F 70%)` | Canvas background |
+| `theme.gradients.ctaCard` | `linear-gradient(160deg, #3D2415, #2D1810)` | `linear-gradient(160deg, #2A1D44, #18122B)` | CTA card fill |
+| `theme.backdropOpacity` | `0.3` | `1.0` | FestiveBackdrop glow multiplier |
+| `theme.sparkOpacity` | `0.2` | `0.55` | Spark particle opacity |
+

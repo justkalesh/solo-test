@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/common/PrimaryButton';
 import GhostButton from '../components/common/GhostButton';
 import SectionCard from '../components/common/SectionCard';
@@ -40,6 +40,7 @@ const FESTIVAL_DATES = [
 ];
 
 export function RegisterAdvancePage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { setUser } = useAppContext();
   const { isMobile } = useDeviceType();
