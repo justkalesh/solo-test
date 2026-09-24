@@ -102,7 +102,7 @@ export default function OrganizerDashboardPage() {
             >
               Organizer Operations Hub
             </h1>
-            <Badge variant="gold" style={{ fontSize: '11px', textTransform: 'uppercase' }}>
+            <Badge color={theme.colors.gold} style={{ fontSize: '11px', textTransform: 'uppercase' }}>
               {stats?.venue || storedVenueId}
             </Badge>
           </div>

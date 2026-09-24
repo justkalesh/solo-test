@@ -280,96 +280,95 @@ export function HomePage() {
               marginBottom: '6px',
             }}
           >
-            Dance at Your Level
+            Dance At Your Own Rhythm
           </h2>
-          <p style={{ fontSize: '13px', color: theme.colors.textMuted }}>
-            Matched so every circle feels right.
+          <p style={{ fontSize: '13px', color: theme.colors.textMuted, maxWidth: '440px', margin: '0 auto' }}>
+            Circles are formed by experience level so you can groove comfortably without feeling rushed or held back.
           </p>
         </div>
 
-        {/* Level Selector Pills */}
+        {/* 3 Skill Level Cards */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '8px',
-            marginBottom: '16px',
-            flexWrap: 'wrap',
+            display: 'grid',
+            gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
+            gap: '12px',
           }}
         >
-          {[
-            { key: 'beginner', label: 'Beginner', color: theme.colors.beginner },
-            { key: 'intermediate', label: 'Intermediate', color: theme.colors.intermediate },
-            { key: 'advanced', label: 'Advanced', color: theme.colors.advanced },
-          ].map((lvl) => (
-            <button
-              key={lvl.key}
-              onClick={() => setActiveLevelPreview(lvl.key)}
-              style={{
-                padding: '8px 18px',
-                minHeight: '40px',
-                borderRadius: '999px',
-                border: `1.5px solid ${activeLevelPreview === lvl.key ? lvl.color : theme.colors.borderDefault}`,
-                background: activeLevelPreview === lvl.key ? `${lvl.color}18` : 'transparent',
-                color: activeLevelPreview === lvl.key ? lvl.color : theme.colors.textSecondary,
-                fontFamily: theme.fonts.body,
-                fontSize: '13px',
-                fontWeight: activeLevelPreview === lvl.key ? 600 : 400,
-                cursor: 'pointer',
-                transition: theme.transitions.normal,
-              }}
-            >
-              {lvl.label}
-            </button>
-          ))}
+          {theme.levels.map((level) => {
+            const isSelected = activeLevelPreview === level.id;
+            return (
+              <button
+                key={level.id}
+                type="button"
+                onClick={() => setActiveLevelPreview(level.id)}
+                aria-pressed={isSelected}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  position: 'relative',
+                  background: level.gradient,
+                  border: `0.5px solid ${isSelected ? level.color : `${level.color}55`}`,
+                  borderRadius: '16px',
+                  padding: isMobile ? '16px' : '20px',
+                  boxShadow: isSelected
+                    ? `0 8px 30px -4px ${level.color}66`
+                    : `0 4px 18px -6px ${level.color}33`,
+                  transform: isSelected ? 'scale(1.02)' : 'none',
+                  transition: 'all 0.22s ease',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  font: 'inherit',
+                  color: 'inherit',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '26px' }} aria-hidden="true">{level.icon}</span>
+                  <Badge color={level.textColor} size="sm">
+                    {level.tag}
+                  </Badge>
+                </div>
+                <div
+                  style={{
+                    fontFamily: theme.fonts.heading,
+                    fontWeight: 700,
+                    fontSize: '18px',
+                    color: theme.colors.textPrimary,
+                    marginBottom: '4px',
+                  }}
+                >
+                  {level.label}
+                </div>
+                <p
+                  style={{
+                    fontFamily: theme.fonts.body,
+                    fontSize: '12.5px',
+                    color: theme.colors.textMuted,
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  {level.desc}
+                </p>
+                {isSelected && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '11px',
+                      color: level.textColor,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span>✓</span> Previewing {level.label} Circle Match
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
-
-        {/* Level Details Card */}
-        <SectionCard
-          style={{
-            padding: '22px 20px',
-            borderColor: activeLevelPreview === 'beginner'
-              ? `${theme.colors.beginner}44`
-              : activeLevelPreview === 'intermediate'
-              ? `${theme.colors.intermediate}44`
-              : `${theme.colors.advanced}44`,
-            transition: theme.transitions.normal,
-          }}
-        >
-          {activeLevelPreview === 'beginner' && (
-            <div>
-              <div style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, color: theme.colors.beginner, marginBottom: '6px' }}>
-                🟢 Beginner Circle
-              </div>
-              <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.6, margin: 0 }}>
-                New to Garba? You'll be in a relaxed circle focused on basic Dodhiyu and two-clap patterns.
-                Your Captain will lead every round with patience. No judgment, just fun.
-              </p>
-            </div>
-          )}
-          {activeLevelPreview === 'intermediate' && (
-            <div>
-              <div style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, color: theme.colors.intermediate, marginBottom: '6px' }}>
-                🟡 Intermediate Circle
-              </div>
-              <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.6, margin: 0 }}>
-                You know the basics and can follow mid-tempo Raas. Circles at this level rotate through
-                classic and semi-fast songs, with room to experiment.
-              </p>
-            </div>
-          )}
-          {activeLevelPreview === 'advanced' && (
-            <div>
-              <div style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, color: theme.colors.advanced, marginBottom: '6px' }}>
-                🔴 Advanced Circle
-              </div>
-              <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.6, margin: 0 }}>
-                Fast-paced Raas Garba, complex choreography, and high-energy performances. This circle
-                is for seasoned dancers who want intensity.
-              </p>
-            </div>
-          )}
-        </SectionCard>
       </section>
 
       {/* ========================================================================= */}
