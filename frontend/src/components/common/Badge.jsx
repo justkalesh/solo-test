@@ -9,7 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
  */
 export function Badge({
   children,
-  color = theme.colors.amber,
+  color: colorProp = null,
   bg = null,
   icon = null,
   size = 'md',
@@ -18,6 +18,8 @@ export function Badge({
   ...props
 }) {
   const theme = useTheme();
+  // Resolved here, not as a default parameter: defaults run before useTheme() is available
+  const color = colorProp || theme.colors.amber;
   const isSmall = size === 'sm';
 
   const badgeStyle = {

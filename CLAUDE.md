@@ -62,7 +62,8 @@ Log phone numbers masked (`***${phone.slice(-4)}`) and secrets via `maskSecret()
 - **Routing:** `router.jsx` lazy-loads every page inside `AppShell` (NavBar, desktop Footer, mobile `BottomNav`). Pages include the multi-step pieces `OtpVerificationModal`, `TicketUploadStep`, and `PaymentStep`, which live in `pages/` but are embedded in the register flows, not routed.
 - **State:** `AppContext` holds the user (persisted to `localStorage`), selected city and venue, notifications, and the active circle. Organizer tokens go in `sessionStorage` only.
 - **Icons:** `lucide-react`. Brand PNGs are in `assets/logo/`. The SVG logo components there are deprecated fallbacks.
-- `CircleActivePage.jsx` has fallback mock circle data marked `TODO: remove mock data before production`.
+- **Skill levels:** the display data (label, icon, tag, desc, colors) lives in `theme.levels`. For level-colored text use `level.textColor`, not `level.color`: the bright accent is unreadable on light-mode backgrounds.
+- `CircleActivePage.jsx` gets its circle only from `AppContext.activeCircle`, which isn't persisted. After a page reload it shows "No Active Circle Found".
 
 ## Docs
 
