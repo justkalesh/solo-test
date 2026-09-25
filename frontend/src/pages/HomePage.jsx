@@ -138,13 +138,15 @@ export function HomePage() {
               mixBlendMode: theme.mode === 'dark' ? 'screen' : 'normal',
             }}
           />
-          {/* Brand Name + Tagline (static) */}
+          {/* Brand wordmark (static). Sized by width: the artwork is ~5:1, so a fixed height
+              made it wider than a phone screen. */}
           <img
             src={logoNameImg}
-            alt="Solo Saathi Circle - Real-Time Group Match Making"
+            alt="Solo Saathi Circle"
             style={{
-              height: isMobile ? '90px' : '110px',
-              width: 'auto',
+              width: isMobile ? '280px' : '340px',
+              maxWidth: '100%',
+              height: 'auto',
               objectFit: 'contain',
               display: 'block',
               mixBlendMode: theme.mode === 'dark' ? 'screen' : 'normal',

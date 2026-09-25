@@ -69,7 +69,7 @@ function distanceKm(lat1, lng1, lat2, lng2) {
 
 export default function VenuesPage() {
   const theme = useTheme();
-  const { isMobile } = useDeviceType();
+  const { isMobile, isDesktop } = useDeviceType();
   const [selectedCity, setSelectedCity] = useState('All');
   const [userLocation, setUserLocation] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -190,7 +190,7 @@ export default function VenuesPage() {
             loading={geoLoading}
             onClick={handleLocateMe}
             fullWidth={isMobile}
-            style={{ padding: isMobile ? '12px 16px' : '8px 16px', fontSize: isMobile ? '14px' : '12px' }}
+            style={{ padding: isDesktop ? '8px 16px' : '12px 16px', fontSize: isDesktop ? '12px' : '14px' }}
           >
             {userLocation ? '✓ GPS Located' : 'Find Near Me'}
           </PrimaryButton>
@@ -339,7 +339,7 @@ export default function VenuesPage() {
                   to={`/register?city=${encodeURIComponent(v.city)}&venue=${encodeURIComponent(v.name)}`}
                   style={{ textDecoration: 'none', flex: 1 }}
                 >
-                  <PrimaryButton style={{ width: '100%', padding: isMobile ? '12px' : '7px', fontSize: isMobile ? '14px' : '11px' }}>
+                  <PrimaryButton style={{ width: '100%', padding: isDesktop ? '7px' : '12px', fontSize: isDesktop ? '11px' : '14px' }}>
                     Register Live
                   </PrimaryButton>
                 </Link>
@@ -347,7 +347,7 @@ export default function VenuesPage() {
                   to={`/advance?city=${encodeURIComponent(v.city)}&venue=${encodeURIComponent(v.name)}`}
                   style={{ textDecoration: 'none', flex: 1 }}
                 >
-                  <GhostButton style={{ width: '100%', padding: isMobile ? '12px' : '7px', fontSize: isMobile ? '14px' : '11px' }}>
+                  <GhostButton style={{ width: '100%', padding: isDesktop ? '7px' : '12px', fontSize: isDesktop ? '11px' : '14px' }}>
                     Book Advance
                   </GhostButton>
                 </Link>

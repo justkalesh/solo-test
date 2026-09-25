@@ -193,14 +193,14 @@ export default function FindMyCirclePage() {
                 We couldn't find any booking for +91 {resultData.whatsapp}. Ready to join a circle
                 tonight?
               </p>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
                 <Link to="/register" style={{ textDecoration: 'none' }}>
-                  <PrimaryButton style={{ padding: '8px 16px', fontSize: '13px' }}>
+                  <PrimaryButton style={{ padding: '8px 16px', minHeight: '44px', fontSize: '13px' }}>
                     Register Live (Walk-up)
                   </PrimaryButton>
                 </Link>
                 <Link to="/advance" style={{ textDecoration: 'none' }}>
-                  <GhostButton style={{ padding: '8px 16px', fontSize: '13px' }}>
+                  <GhostButton style={{ padding: '8px 16px', minHeight: '44px', fontSize: '13px' }}>
                     Book Advance Pass
                   </GhostButton>
                 </Link>
@@ -341,25 +341,18 @@ export default function FindMyCirclePage() {
                       style={{
                         display: 'flex',
                         flexWrap: 'wrap',
-                        gap: '8px',
+                        gap: '4px 14px',
                         fontSize: '12px',
                         color: theme.colors.textMuted,
                       }}
                     >
                       <span>👤 {reg.name}</span>
-                      <span>•</span>
                       <span>⚡ Skill: {reg.skillLevel}</span>
                       {reg.isAllWomen && (
-                        <>
-                          <span>•</span>
-                          <span style={{ color: theme.colors.gold }}>🌸 All-Women</span>
-                        </>
+                        <span style={{ color: theme.colors.gold }}>🌸 All-Women</span>
                       )}
                       {reg.isCaptain && (
-                        <>
-                          <span>•</span>
-                          <span style={{ color: theme.colors.gold }}>👑 Captain</span>
-                        </>
+                        <span style={{ color: theme.colors.gold }}>👑 Captain</span>
                       )}
                     </div>
                   </div>
@@ -414,16 +407,17 @@ export default function FindMyCirclePage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: 'rgba(0,0,0,0.3)',
+                      gap: '8px',
+                      background: theme.colors.surfaceElevated,
                       border: `1px solid ${theme.colors.borderLight}`,
                       borderRadius: '8px',
                       padding: '8px 12px',
                       marginBottom: '16px',
                     }}
                   >
-                    <div style={{ fontSize: '11px', color: theme.colors.textMuted }}>
+                    <div style={{ fontSize: '11px', color: theme.colors.textMuted, minWidth: 0, overflowWrap: 'anywhere' }}>
                       Pass ID:{' '}
-                      <code style={{ color: theme.colors.gold, fontWeight: 'bold' }}>
+                      <code style={{ color: theme.colors.textPrimary, fontWeight: 'bold' }}>
                         {reg.qrPassToken || reg.registrationId}
                       </code>
                     </div>
@@ -434,6 +428,7 @@ export default function FindMyCirclePage() {
                         border: `1px solid ${isPast ? '#6B7280' : '#10B981'}`,
                         borderRadius: '4px',
                         padding: '2px 6px',
+                        flexShrink: 0,
                       }}
                     >
                       {isPast ? 'EXPIRED' : 'VERIFIED PASS'}
@@ -452,7 +447,7 @@ export default function FindMyCirclePage() {
                         >
                           <PrimaryButton
                             id={`btn-open-beacon-${reg.registrationId}`}
-                            style={{ width: '100%', padding: '9px 12px', fontSize: '12px' }}
+                            style={{ width: '100%', padding: '9px 12px', minHeight: '44px', fontSize: '13px' }}
                           >
                             🪩 Open Color Beacon
                           </PrimaryButton>
@@ -467,7 +462,8 @@ export default function FindMyCirclePage() {
                             style={{
                               width: '100%',
                               padding: '9px 12px',
-                              fontSize: '12px',
+                              minHeight: '44px',
+                              fontSize: '13px',
                               borderColor: theme.colors.gold,
                               color: theme.colors.gold,
                             }}

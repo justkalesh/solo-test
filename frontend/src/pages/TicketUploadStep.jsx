@@ -76,7 +76,7 @@ export function TicketUploadStep({
       // 1. Client-side canvas compression
       const base64Data = await compressImageFile(file);
 
-      // 2. Pre-verify ticket via Anthropic Claude Vision
+      // 2. Pre-verify ticket via the server-side OCR check (/verify-ticket)
       let ocrResult = null;
       let warning = null;
       try {
@@ -204,18 +204,18 @@ export function TicketUploadStep({
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{
-                border: '1.5px dashed #4A3B6E',
+                border: `1.5px dashed ${theme.colors.borderDefault}`,
                 borderRadius: '14px',
                 padding: '28px 16px',
                 textAlign: 'center',
                 cursor: 'pointer',
-                background: 'rgba(36, 29, 61, 0.4)',
+                background: theme.colors.surfaceElevated,
                 transition: 'all 0.2s ease',
               }}
             >
               {loadingOcr ? (
                 <div style={{ padding: '10px 0' }}>
-                  <LoadingSpinner size={28} label="Verifying ticket with Claude Vision..." />
+                  <LoadingSpinner size={28} label="Verifying your ticket..." />
                 </div>
               ) : (
                 <>
@@ -248,7 +248,7 @@ export function TicketUploadStep({
                 padding: '12px',
               }}
             >
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
                 <img
                   src={ticketPhoto}
                   alt="Uploaded Ticket Preview"
@@ -260,7 +260,7 @@ export function TicketUploadStep({
                     border: '0.5px solid rgba(255,255,255,0.1)',
                   }}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: '1 1 140px', minWidth: 0 }}>
                   <div
                     style={{
                       fontSize: '13px',
@@ -286,7 +286,7 @@ export function TicketUploadStep({
                 </div>
                 <GhostButton
                   onClick={handleRemovePhoto}
-                  style={{ padding: '6px 10px', fontSize: '11px', color: '#FFA1B2' }}
+                  style={{ padding: '8px 14px', minHeight: '40px', fontSize: '12px', marginLeft: 'auto' }}
                 >
                   Change
                 </GhostButton>

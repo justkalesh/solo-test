@@ -291,7 +291,7 @@ export default function CircleChatPage() {
             padding: '8px 12px',
             marginBottom: '10px',
             fontSize: '12px',
-            color: chatIsClosed ? '#FCA5A5' : theme.colors.gold,
+            color: chatIsClosed ? theme.colors.textDanger : theme.colors.gold,
             textAlign: 'center',
           }}
         >
@@ -714,6 +714,7 @@ export default function CircleChatPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
+                      minHeight: '44px',
                       padding: '8px 12px',
                       background: 'rgba(255,255,255,0.04)',
                       borderRadius: '8px',
@@ -726,9 +727,16 @@ export default function CircleChatPage() {
                       value={m.registrationId}
                       checked={newCaptainId === m.registrationId}
                       onChange={() => setNewCaptainId(m.registrationId)}
+                      style={{ width: '18px', height: '18px', flexShrink: 0, accentColor: theme.colors.gold }}
                     />
-                    <span style={{ fontSize: '13px', color: theme.colors.textPrimary }}>
-                      {m.name} ({m.gender}, {m.skillLevel})
+                    <span style={{ fontSize: '13px', color: theme.colors.textPrimary, minWidth: 0 }}>
+                      {m.name}
+                      {(m.gender || m.skillLevel) && (
+                        <span style={{ color: theme.colors.textMuted }}>
+                          {' '}
+                          ({[m.gender, m.skillLevel].filter(Boolean).join(', ').replace(/_/g, ' ')})
+                        </span>
+                      )}
                     </span>
                   </label>
                 ))}
@@ -781,12 +789,15 @@ export default function CircleChatPage() {
               </h3>
               <button
                 onClick={() => setShowSwitchModal(false)}
+                aria-label="Close switch circle"
                 style={{
                   background: 'none',
                   border: 'none',
                   color: theme.colors.textMuted,
                   fontSize: '18px',
                   cursor: 'pointer',
+                  padding: '8px 10px',
+                  margin: '-8px -10px -8px 0',
                 }}
               >
                 ✕

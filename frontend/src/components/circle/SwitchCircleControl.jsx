@@ -72,7 +72,16 @@ export function SwitchCircleControl({
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: theme.colors.textMuted, cursor: 'pointer' }}
+            aria-label="Close switch panel"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textMuted,
+              cursor: 'pointer',
+              minWidth: '40px',
+              minHeight: '40px',
+              margin: '-10px -12px -10px 0',
+            }}
           >
             ✕
           </button>
@@ -96,34 +105,44 @@ export function SwitchCircleControl({
           const isCurrent = currentLevel === lvl.id;
 
           return (
-            <div
+            <button
               key={lvl.id}
+              type="button"
               onClick={() => setTargetLevel(lvl.id)}
+              aria-pressed={isSelected}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: '10px',
+                width: '100%',
+                minHeight: '44px',
                 padding: '10px 14px',
                 borderRadius: '10px',
                 background: isSelected ? `${lvl.color}22` : 'rgba(255,255,255,0.03)',
                 border: isSelected ? `1px solid ${lvl.color}` : theme.borders.subtle,
+                color: theme.colors.textPrimary,
+                font: 'inherit',
+                textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>{lvl.icon}</span>
-                <span style={{ fontWeight: 600, fontSize: '13px', color: theme.colors.textPrimary }}>
-                  {lvl.label}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <span aria-hidden="true">{lvl.icon}</span>
+                <span style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 600, fontSize: '13px', color: theme.colors.textPrimary, whiteSpace: 'nowrap' }}>
+                    {lvl.label}
+                  </span>
+                  {isCurrent && (
+                    <span style={{ fontSize: '11px', color: lvl.textColor }}>Current</span>
+                  )}
                 </span>
-                {isCurrent && (
-                  <span style={{ fontSize: '11px', color: theme.colors.amber }}>(Current)</span>
-                )}
               </div>
-              <span style={{ fontSize: '11px', color: lvl.color, fontWeight: 700 }}>
+              <span style={{ fontSize: '11px', color: lvl.textColor, fontWeight: 700, textAlign: 'right', minWidth: 0 }}>
                 {lvl.tag}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

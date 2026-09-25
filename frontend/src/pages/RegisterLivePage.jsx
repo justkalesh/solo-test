@@ -354,26 +354,36 @@ export function RegisterLivePage() {
               {theme.levels.map((lvl) => {
                 const isSelected = skillLevel === lvl.id;
                 return (
-                  <div
+                  <button
                     key={lvl.id}
+                    type="button"
                     onClick={() => setSkillLevel(lvl.id)}
+                    aria-pressed={isSelected}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      gap: '10px',
+                      width: '100%',
+                      minHeight: '44px',
                       padding: '10px 14px',
                       borderRadius: '10px',
                       background: isSelected ? `${lvl.color}22` : 'rgba(255,255,255,0.03)',
                       border: isSelected ? `1px solid ${lvl.color}` : theme.borders.subtle,
+                      color: theme.colors.textPrimary,
+                      font: 'inherit',
+                      textAlign: 'left',
                       cursor: 'pointer',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>{lvl.icon}</span>
-                      <span style={{ fontWeight: 600, fontSize: '13px' }}>{lvl.label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      <span aria-hidden="true">{lvl.icon}</span>
+                      <span style={{ fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>{lvl.label}</span>
                     </div>
-                    <span style={{ fontSize: '11px', color: lvl.color, fontWeight: 700 }}>{lvl.tag}</span>
-                  </div>
+                    <span style={{ fontSize: '11px', color: lvl.textColor, fontWeight: 700, textAlign: 'right', minWidth: 0 }}>
+                      {lvl.tag}
+                    </span>
+                  </button>
                 );
               })}
             </div>

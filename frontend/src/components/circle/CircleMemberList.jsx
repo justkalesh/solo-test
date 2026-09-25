@@ -66,7 +66,7 @@ export function CircleMemberList({
                   ? 'rgba(227, 165, 66, 0.12)'
                   : isCaptain
                   ? 'rgba(245, 179, 1, 0.08)'
-                  : 'rgba(36, 29, 61, 0.5)',
+                  : theme.colors.surfaceElevated,
                 border: isSelf
                   ? `0.5px solid ${theme.colors.amber}`
                   : isCaptain
@@ -81,7 +81,7 @@ export function CircleMemberList({
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: isCaptain ? theme.gradients.goldPink : '#3A3257',
+                    background: isCaptain ? theme.gradients.goldPink : theme.colors.borderSubtle,
                     color: isCaptain ? '#1B1730' : theme.colors.textPrimary,
                     display: 'flex',
                     alignItems: 'center',

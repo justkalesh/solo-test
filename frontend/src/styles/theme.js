@@ -135,6 +135,7 @@ export const lightTheme = deepFreeze({
     // For surfaces that stay dark in both themes (e.g. gradients.ctaCard)
     textOnDark: '#FFF5EB',
     textOnDarkMuted: '#D9CBBE',
+    textDanger: '#BE123C',
 
     // Borders & Dividers
     borderDefault: '#E8D8C8',
@@ -253,6 +254,7 @@ export const darkTheme = deepFreeze({
     textLabel: '#B29CE0',
     textOnDark: '#F3EDE0',
     textOnDarkMuted: '#B9AFD1',
+    textDanger: '#FFA1B2',
 
     // Borders & Dividers
     borderDefault: '#4A3B6E',

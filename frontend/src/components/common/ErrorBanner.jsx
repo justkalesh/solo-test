@@ -42,7 +42,7 @@ export function ErrorBanner({
             fontFamily: theme.fonts.body,
             fontWeight: theme.fontWeights.semibold,
             fontSize: '13px',
-            color: '#FFA1B2',
+            color: theme.colors.textDanger,
             lineHeight: 1.4,
           }}
         >
@@ -75,8 +75,11 @@ export function ErrorBanner({
             cursor: 'pointer',
             fontSize: '16px',
             lineHeight: 1,
-            padding: '2px 6px',
-            borderRadius: '4px',
+            minWidth: '40px',
+            minHeight: '40px',
+            margin: '-10px -12px -10px 0',
+            borderRadius: '8px',
+            flexShrink: 0,
           }}
         >
           ✕

@@ -63,6 +63,7 @@ Log phone numbers masked (`***${phone.slice(-4)}`) and secrets via `maskSecret()
 - **State:** `AppContext` holds the user (persisted to `localStorage`), selected city and venue, notifications, and the active circle. Organizer tokens go in `sessionStorage` only.
 - **Icons:** `lucide-react`. Brand PNGs are in `assets/logo/`. The SVG logo components there are deprecated fallbacks.
 - **Skill levels:** the display data (label, icon, tag, desc, colors) lives in `theme.levels`. For level-colored text use `level.textColor`, not `level.color`: the bright accent is unreadable on light-mode backgrounds.
+- **Text on special surfaces:** use `theme.colors.textDanger` for error text, and `textOnDark` / `textOnDarkMuted` on surfaces that stay dark in both themes (for example `gradients.ctaCard` and the Beacon panels). For fills, use `surfaceElevated` rather than dark `rgba(...)` values, which turn into grey slabs in light mode.
 - `CircleActivePage.jsx` gets its circle only from `AppContext.activeCircle`, which isn't persisted. After a page reload it shows "No Active Circle Found".
 
 ## Docs

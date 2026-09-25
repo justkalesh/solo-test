@@ -159,7 +159,7 @@ export function PaymentStep({
           style={{
             padding: '30px 20px',
             textAlign: 'center',
-            background: 'rgba(36, 29, 61, 0.7)',
+            background: theme.colors.surfaceElevated,
             borderRadius: '16px',
             border: theme.borders.gold,
           }}
