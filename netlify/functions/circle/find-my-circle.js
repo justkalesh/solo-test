@@ -2,17 +2,24 @@
  * @file netlify/functions/circle/find-my-circle.js
  * @description Circle Lookup and Attendee Portal by WhatsApp Mobile Number.
  *
+ * Requires the attendee session from verify-otp (`Authorization: Bearer <token>`); the phone
+ * number comes from the token. A `whatsapp` in the request that doesn't match the token gets a
+ * 401 with `sessionRequired`, so the frontend verifies that number first.
+ *
  * Implements:
  * - Cross-event registration lookup across past, present, and future festival nights.
+ * - Circles that were merged (small advance circles, 12h before the event) resolve to the
+ *   circle the attendee is in now.
  * - Access rules:
- *   - Tonight / currently live entries: Full Beacon and Chat link access (hasBeaconAccess: true, hasChatAccess: true).
- *   - Past festival nights: Read-only ticket details & QR code retained; Beacon and Chat links strictly withheld
- *     (hasBeaconAccess: false, hasChatAccess: false).
- *   - Upcoming advance nights: View registration metadata and QR pass; chat links pending batch finalization.
+ *   - Tonight / currently live entries: Beacon access (hasBeaconAccess: true).
+ *   - Past festival nights: Read-only ticket details & QR code retained; Beacon withheld.
+ *   - Upcoming advance nights: View registration metadata and QR pass.
+ * - Group chat is hidden for launch, so hasChatAccess is always false and chatLink null.
  */
 
 const { successResponse, errorResponse, handleOptions } = require('../../shared/response');
 const { getIstTime } = require('../../shared/matching');
+const { requireAttendee } = require('../../shared/session');
 const db = require('../../shared/db');
 
 /**
@@ -58,11 +65,15 @@ exports.handler = async (event, context) => {
     }
   }
 
-  if (!whatsapp) {
-    return errorResponse("Missing required parameter 'whatsapp'.", 400);
-  }
+  const caller = requireAttendee(event);
+  if (caller.response) return caller.response;
 
-  const phone = normalizePhone(whatsapp);
+  const phone = caller.phone;
+  if (whatsapp && normalizePhone(whatsapp) !== phone) {
+    return errorResponse('Verify this WhatsApp number with OTP to see its circles.', 401, {
+      sessionRequired: true,
+    });
+  }
   const ist = getIstTime();
   const todayDateString = ist.dateString;
 
@@ -85,52 +96,52 @@ exports.handler = async (event, context) => {
       let circleDetails = null;
 
       if (reg.circleId) {
-        circleDetails = await db.getCircleState(reg.circleId);
+        circleDetails = await db.getCurrentCircleState(reg.circleId);
       }
 
       let accessTier = 'past';
       let hasBeaconAccess = false;
-      let hasChatAccess = false;
+      const hasChatAccess = false; // group chat is hidden for launch
       let statusMessage = '';
+      const registrationId = reg.id || reg.registrationId;
+      const circleId = circleDetails?.circleId || reg.circleId || null;
 
       if (eventDate === todayDateString) {
-        // Tonight's festival night: Full live access to beacon and chat
+        // Tonight's festival night: live access to the beacon
         accessTier = 'live';
-        hasBeaconAccess = true;
-        hasChatAccess = Boolean(circleDetails?.chatLink);
-        statusMessage = 'Active circle for tonight. Beacon and Group Chat enabled.';
+        hasBeaconAccess = Boolean(circleId);
+        statusMessage = circleId
+          ? 'Active circle for tonight. Beacon enabled.'
+          : 'Registered for tonight. Your circle appears here once payment is confirmed.';
       } else if (eventDate > todayDateString) {
-        // Future advance booking: View-only pass, chat unlocks on finalization
+        // Future advance booking: View-only pass
         accessTier = 'upcoming';
         hasBeaconAccess = false;
-        hasChatAccess = false;
-        statusMessage = reg.circleId
-          ? 'Circle assigned. Beacon and group chat unlock on event night.'
+        statusMessage = circleId
+          ? 'Circle assigned. The beacon unlocks on event night.'
           : 'Advance registration confirmed. Circle assignment occurs 48 hours prior to event.';
       } else {
-        // Past festival night: Read-only archive; Beacon and Chat withheld
+        // Past festival night: Read-only archive; Beacon withheld
         accessTier = 'past';
         hasBeaconAccess = false;
-        hasChatAccess = false;
         statusMessage = 'Past event night. Raas over, circle closed. View-only pass archived.';
       }
 
-      // Generate a mock QR pass token if not already present
-      const qrPassToken = `pass_${reg.id || reg.registrationId}_${phone.slice(-4)}`;
+      const qrPassToken = `pass_${registrationId}`;
 
       enrichedEntries.push({
-        registrationId: reg.id || reg.registrationId,
+        registrationId,
         name: reg.name,
         city: reg.city,
         venue: reg.venue,
         eventDate,
         skillLevel: reg.skillLevel,
         isAllWomen: Boolean(reg.allWomenToggle),
-        isCaptain: Boolean(circleDetails?.captainId && circleDetails.captainId === (reg.id || reg.registrationId)),
-        circleId: reg.circleId || null,
+        isCaptain: Boolean(circleDetails?.captainId && circleDetails.captainId === registrationId),
+        circleId,
         circleName: circleDetails?.name || null,
         meetingPoint: hasBeaconAccess ? (circleDetails?.meetingPoint || null) : null,
-        chatLink: hasChatAccess ? (circleDetails?.chatLink || null) : null,
+        chatLink: null,
         qrPassToken,
         accessTier,
         hasBeaconAccess,

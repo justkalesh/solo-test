@@ -21,6 +21,7 @@ const REQUIRED_ENV_VARS = [
   'RAZORPAY_KEY_SECRET',
   'RAZORPAY_WEBHOOK_SECRET',
   'TICKET_TOKEN_SECRET',
+  'ATTENDEE_SESSION_SECRET',
   'FIREBASE_SERVICE_ACCOUNT',
 ];
 
@@ -63,6 +64,15 @@ if (isOtpDevMode) {
   );
 }
 
+// The ADMIN_SECRET master login (any venue, any dashboard) is for test environments only.
+const allowMasterAdminLogin = process.env.ALLOW_MASTER_ADMIN_LOGIN === 'true';
+
+if (allowMasterAdminLogin) {
+  console.warn(
+    '[SoloSaathi Config Warning] ALLOW_MASTER_ADMIN_LOGIN is enabled: ADMIN_SECRET can log into every venue dashboard. DO NOT USE IN PRODUCTION.'
+  );
+}
+
 /**
  * Frozen application configuration object.
  */
@@ -78,8 +88,14 @@ const config = Object.freeze({
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
   TICKET_TOKEN_SECRET: process.env.TICKET_TOKEN_SECRET,
+  ATTENDEE_SESSION_SECRET: process.env.ATTENDEE_SESSION_SECRET,
   FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT,
   OTP_DEV_MODE: isOtpDevMode,
+  ALLOW_MASTER_ADMIN_LOGIN: allowMasterAdminLogin,
+  // Browser origin allowed to call the functions (CORS); '*' is only for local development
+  ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || '*',
+  // Gemini model used for ticket photo checks (stable Flash model as of Sep 2026)
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
 });
 
 module.exports = config;

@@ -9,18 +9,14 @@
  * - Compares `expiresAt` (stored as epoch milliseconds) against `Date.now()`.
  * - Processes up to 500 expired documents per collection per run (Firestore batch limit).
  * - CRON SCHEDULE RATIONALE:
- *   "@daily" (runs once per day at midnight UTC: '0 0 * * *').
+ *   "@daily" (runs once per day at midnight UTC: '0 0 * * *'), set in netlify.toml
+ *   ([functions."cleanup-expired"]) because this file is exposed through a shim.
  *   OTP codes expire in minutes and verified sessions in 30 minutes, so stale
  *   documents accumulate harmlessly. A daily sweep keeps the collections lean
  *   without incurring excessive function invocations.
  */
 
 const db = require('../../shared/db');
-
-// Netlify Scheduled Function configuration (v2 style)
-exports.config = {
-  schedule: '@daily',
-};
 
 /**
  * Netlify Function Handler: Deletes expired documents from OTP and verified collections.

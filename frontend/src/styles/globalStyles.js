@@ -11,7 +11,6 @@ import { lightTheme } from './theme';
 
 export function buildGlobalCss(theme) {
   return `
-  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
   *, *::before, *::after {
     box-sizing: border-box;
@@ -106,9 +105,10 @@ export function buildGlobalCss(theme) {
     100% { transform: rotate(360deg); }
   }
 
+  /* Beacon color layer only: opacity, no movement, over an opaque black base */
   @keyframes beaconPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.35; transform: scale(0.98); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.15; }
   }
 
   @keyframes floatGentle {

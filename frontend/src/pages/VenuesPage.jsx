@@ -197,7 +197,7 @@ export default function VenuesPage() {
         </div>
 
         {geoError && (
-          <div style={{ fontSize: '11px', color: '#F87171', marginTop: '8px' }}>{geoError}</div>
+          <div style={{ fontSize: '11px', color: theme.colors.textDanger, marginTop: '8px' }}>{geoError}</div>
         )}
 
         {nearestVenue && (
@@ -209,7 +209,7 @@ export default function VenuesPage() {
               border: `1px solid ${theme.colors.gold}`,
               borderRadius: '6px',
               fontSize: '12px',
-              color: theme.colors.gold,
+              color: theme.colors.goldText,
             }}
           >
             <Sparkles size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} color={theme.colors.gold} /> Nearest Ground:{' '}
@@ -292,7 +292,7 @@ export default function VenuesPage() {
                   <span
                     style={{
                       fontSize: '11px',
-                      color: theme.colors.cyan,
+                      color: theme.colors.cyanText,
                       background: 'rgba(0,194,209,0.1)',
                       border: `1px solid ${theme.colors.cyan}`,
                       borderRadius: '4px',
@@ -323,7 +323,7 @@ export default function VenuesPage() {
                   <div
                     style={{
                       fontSize: '11px',
-                      color: isNearest ? theme.colors.gold : theme.colors.textSecondary,
+                      color: isNearest ? theme.colors.goldText : theme.colors.textSecondary,
                       marginBottom: '12px',
                       fontWeight: isNearest ? 600 : 400,
                     }}

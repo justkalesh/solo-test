@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import LoadingSpinner from './LoadingSpinner';
 
 /**
  * PrimaryButton — SoloSaathi Circle
  *
  * Dominant call-to-action button featuring the brand gold-to-magenta gradient,
  * Baloo 2 typography, and responsive hover/active micro-elevations.
+ * `loading` shows a spinner and disables the button while a request runs.
  */
 export function PrimaryButton({
   children,
   onClick,
-  disabled = false,
+  disabled: disabledProp = false,
+  loading = false,
   fullWidth = true,
   icon = null,
   style = {},
@@ -21,6 +24,7 @@ export function PrimaryButton({
   const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const disabled = disabledProp || loading;
 
   const baseStyle = {
     display: 'inline-flex',
@@ -64,6 +68,7 @@ export function PrimaryButton({
       type={type}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
+      aria-busy={loading || undefined}
       style={baseStyle}
       className={className}
       onMouseEnter={() => !disabled && setIsHovered(true)}
@@ -75,7 +80,8 @@ export function PrimaryButton({
       onMouseUp={() => setIsActive(false)}
       {...props}
     >
-      {icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>}
+      {loading && <LoadingSpinner size={16} color={theme.colors.textDisabled} />}
+      {!loading && icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>}
       <span>{children}</span>
     </button>
   );

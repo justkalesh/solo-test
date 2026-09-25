@@ -1,72 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import SectionCard from '../components/common/SectionCard';
 import GhostButton from '../components/common/GhostButton';
 import Badge from '../components/common/Badge';
+import { useAppContext } from '../context/AppContext';
 
-const DEFAULT_NOTIFICATIONS = [
-  {
-    id: 'n1',
-    title: '⏰ Chat Auto-Closing Notice',
-    message:
-      'Navratri night winds down at 1:00 AM IST. Group chats will automatically archive for the night per festival ground guidelines.',
-    time: '12:45 AM',
-    tag: 'Safety Alert',
-    tagColor: '#F5B301',
-    unread: true,
-    actionLink: '/find-circle',
-    actionLabel: 'View Circle Pass',
-  },
-  {
-    id: 'n2',
-    title: '📍 Meeting Point Assigned',
-    message:
-      'Your Circle Captain has set the rendezvous spot: Near Main Stage / Stall 5. Turn on your color beacon when you approach!',
-    time: '7:15 PM',
-    tag: 'Circle Update',
-    tagColor: '#10B981',
-    unread: true,
-    actionLink: '/find-circle',
-    actionLabel: 'Open Beacon',
-  },
-  {
-    id: 'n3',
-    title: '🚪 Gates Open at 6:30 PM',
-    message:
-      'Live walk-up registrations and AI ticket verification are now live! Head to the SoloSaathi booth near Gate 2.',
-    time: '6:30 PM',
-    tag: 'Ground Notice',
-    tagColor: '#00C2D1',
-    unread: false,
-    actionLink: '/register',
-    actionLabel: 'Register Walk-Up',
-  },
-  {
-    id: 'n4',
-    title: '🎟️ Advance Booking Confirmed',
-    message:
-      'Your pre-booked slot for peak Navratri night is locked. Circle matching completes 48 hours prior to the event.',
-    time: 'Yesterday',
-    tag: 'Booking',
-    tagColor: '#7C3AED',
-    unread: false,
-    actionLink: '/find-circle',
-    actionLabel: 'My Passes',
-  },
-];
 
 export default function NotificationsPage() {
   const theme = useTheme();
-  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-  };
-
-  const clearNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  const { notifications, markAllNotificationsRead, dismissNotification } = useAppContext();
+  const toneColor = (n) => theme.colors[n.tone] || theme.colors.gold;
+  const toneText = (n) => theme.colors[`${n.tone}Text`] || theme.colors.goldText;
 
   return (
     <div
@@ -103,9 +48,9 @@ export default function NotificationsPage() {
           </p>
         </div>
 
-        {notifications.some((n) => n.unread) && (
+        {notifications.some((n) => !n.read) && (
           <GhostButton
-            onClick={markAllAsRead}
+            onClick={markAllNotificationsRead}
             style={{ padding: '8px 12px', fontSize: '12px', minHeight: '36px', height: 'fit-content', flexShrink: 0 }}
           >
             Mark all read
@@ -131,9 +76,9 @@ export default function NotificationsPage() {
               style={{
                 padding: '16px',
                 position: 'relative',
-                background: n.unread ? theme.gradients.cardNeutral : theme.colors.surfaceElevated,
-                borderLeft: n.unread
-                  ? `4px solid ${n.tagColor || theme.colors.gold}`
+                background: !n.read ? theme.gradients.cardNeutral : theme.colors.surfaceElevated,
+                borderLeft: !n.read
+                  ? `4px solid ${toneColor(n)}`
                   : `1px solid ${theme.colors.borderLight}`,
               }}
             >
@@ -149,9 +94,9 @@ export default function NotificationsPage() {
                   <span
                     style={{
                       fontSize: '11px',
-                      color: n.tagColor || theme.colors.gold,
-                      background: 'rgba(255,255,255,0.06)',
-                      border: `1px solid ${n.tagColor || theme.colors.gold}`,
+                      color: toneText(n),
+                      background: theme.colors.surfaceElevated,
+                      border: `1px solid ${toneColor(n)}`,
                       borderRadius: '12px',
                       padding: '2px 8px',
                       fontWeight: 600,
@@ -162,7 +107,7 @@ export default function NotificationsPage() {
                   <span style={{ fontSize: '11px', color: theme.colors.textMuted }}>{n.time}</span>
                 </div>
                 <button
-                  onClick={() => clearNotification(n.id)}
+                  onClick={() => dismissNotification(n.id)}
                   aria-label="Dismiss notification"
                   style={{
                     background: 'none',
@@ -211,7 +156,7 @@ export default function NotificationsPage() {
                     style={{
                       fontSize: '13px',
                       fontWeight: 600,
-                      color: theme.colors.gold,
+                      color: theme.colors.goldText,
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',

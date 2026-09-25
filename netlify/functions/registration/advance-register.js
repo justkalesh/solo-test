@@ -121,7 +121,7 @@ exports.handler = async (event, context) => {
     }
 
     // 6. Generate registration draft ID
-    const registrationId = `reg_adv_${phone}_${now}_${crypto.randomBytes(3).toString('hex')}`;
+    const registrationId = `reg_adv_${now}_${crypto.randomBytes(6).toString('hex')}`;
 
     // 7. Persist Registration Record with paymentStatus: 'pending'
     // GATED PAYMENT ENFORCEMENT (Phase 3):

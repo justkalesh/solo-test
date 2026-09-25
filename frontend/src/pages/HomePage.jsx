@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logo/Logo.png';
-import logoSquareImg from '../assets/logo/Logo_Square.png';
 import logoNameImg from '../assets/logo/Logo_Name.png';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { GhostButton } from '../components/common/GhostButton';
@@ -442,7 +441,7 @@ export function HomePage() {
                   fontFamily: theme.fonts.mono,
                   fontSize: '12px',
                   fontWeight: 700,
-                  color: theme.colors.gold,
+                  color: theme.colors.goldText,
                   letterSpacing: '1px',
                 }}
               >
@@ -495,7 +494,7 @@ export function HomePage() {
                   fontFamily: theme.fonts.mono,
                   fontSize: '12px',
                   fontWeight: 700,
-                  color: theme.colors.pink,
+                  color: theme.colors.pinkText,
                   letterSpacing: '1px',
                 }}
               >
@@ -548,7 +547,7 @@ export function HomePage() {
                   fontFamily: theme.fonts.mono,
                   fontSize: '12px',
                   fontWeight: 700,
-                  color: theme.colors.cyan,
+                  color: theme.colors.cyanText,
                   letterSpacing: '1px',
                 }}
               >

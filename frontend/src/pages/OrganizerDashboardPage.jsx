@@ -39,8 +39,8 @@ export default function OrganizerDashboardPage() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        // The server reads the venue from the organizer token
         params: {
-          venue: storedVenueId,
           eventDate: selectedDate,
         },
       });
@@ -139,7 +139,7 @@ export default function OrganizerDashboardPage() {
           <GhostButton
             id="btn-organizer-logout"
             onClick={handleLogout}
-            style={{ padding: '8px 12px', minHeight: '40px', fontSize: '12px', color: '#F87171' }}
+            style={{ padding: '8px 12px', minHeight: '40px', fontSize: '12px', color: theme.colors.textDanger }}
           >
             Sign Out
           </GhostButton>
@@ -150,7 +150,7 @@ export default function OrganizerDashboardPage() {
       <div
         style={{
           background: 'rgba(16,185,129,0.08)',
-          border: '1px solid #10B981',
+          border: `1px solid ${theme.colors.liveGreen}`,
           borderRadius: '8px',
           padding: '12px 16px',
           display: 'flex',
@@ -161,7 +161,7 @@ export default function OrganizerDashboardPage() {
       >
         <span style={{ fontSize: '22px' }}>🛡️</span>
         <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#34D399' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: theme.colors.liveGreenText }}>
             Zero-PII Privacy Protection Enforced
           </div>
           <div style={{ fontSize: '11px', color: theme.colors.textMuted, lineHeight: 1.4 }}>
@@ -200,7 +200,7 @@ export default function OrganizerDashboardPage() {
                   fontFamily: theme.fonts.heading,
                   fontSize: '32px',
                   fontWeight: 700,
-                  color: '#10B981',
+                  color: theme.colors.liveGreenText,
                   lineHeight: 1,
                   marginBottom: '6px',
                 }}
@@ -249,7 +249,7 @@ export default function OrganizerDashboardPage() {
                   fontFamily: theme.fonts.heading,
                   fontSize: '32px',
                   fontWeight: 700,
-                  color: theme.colors.gold,
+                  color: theme.colors.goldText,
                   lineHeight: 1,
                   marginBottom: '6px',
                 }}
@@ -260,6 +260,12 @@ export default function OrganizerDashboardPage() {
                 Avg Size: <strong>{stats.circles?.averageSize || 0}</strong> • All-Women:{' '}
                 <strong>{stats.circles?.allWomenCircleCount || 0}</strong>
               </div>
+              {stats.circles?.needsAttention > 0 && (
+                <div style={{ fontSize: '12px', color: theme.colors.textDanger, marginTop: '6px' }}>
+                  ⚠️ {stats.circles.needsAttention} small circle(s) couldn't be merged. Please check
+                  on them before the event.
+                </div>
+              )}
             </SectionCard>
           </div>
 
@@ -325,7 +331,7 @@ export default function OrganizerDashboardPage() {
                       <div
                         style={{
                           height: '6px',
-                          background: 'rgba(255,255,255,0.06)',
+                          background: theme.colors.borderSubtle,
                           borderRadius: '3px',
                           overflow: 'hidden',
                         }}
@@ -366,12 +372,12 @@ export default function OrganizerDashboardPage() {
                   {
                     label: 'Female Attendees',
                     count: stats.genderBalance?.female || 0,
-                    color: theme.colors.pink,
+                    color: theme.colors.pinkText,
                   },
                   {
                     label: 'Male Attendees',
                     count: stats.genderBalance?.male || 0,
-                    color: theme.colors.cyan,
+                    color: theme.colors.cyanText,
                   },
                   {
                     label: 'Prefer not to say',
@@ -400,7 +406,7 @@ export default function OrganizerDashboardPage() {
                       <div
                         style={{
                           height: '6px',
-                          background: 'rgba(255,255,255,0.06)',
+                          background: theme.colors.borderSubtle,
                           borderRadius: '3px',
                           overflow: 'hidden',
                         }}

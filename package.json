@@ -10,8 +10,10 @@
     "backend": "npx netlify dev",
     "backend:functions": "npx netlify functions:serve",
     "frontend": "npm --prefix frontend run dev",
+    "frontend:mock": "npm --prefix frontend run dev:mock",
     "build:frontend": "npm --prefix frontend run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "create-organizer": "node --env-file=.env scripts/create-organizer.js",
+    "test": "node --test \"tests/*.test.js\" \"tests/*.test.mjs\""
   },
   "repository": {
     "type": "git",

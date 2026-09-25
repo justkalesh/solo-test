@@ -2,13 +2,17 @@
  * @file netlify/functions/circle/circle-actions.js
  * @description Circle Management and Participant Actions Handler for SoloSaathi Circle.
  *
+ * Every action needs the attendee session from verify-otp (`Authorization: Bearer <token>`), and
+ * `registrationId` must be one of the caller's own registrations.
+ *
  * Dispatches and processes circle participant actions:
- * - 'grow': Any member opens 1-20 spots (GROW_MIN_SPOTS to GROW_MAX_SPOTS) and unlocks the circle.
- * - 'lock': Any member locks circle to prevent additional walk-ins.
+ * - 'grow': Captain opens 1-20 spots (GROW_MIN_SPOTS to GROW_MAX_SPOTS) and unlocks the circle.
+ * - 'lock': Captain locks the circle to prevent additional walk-ins.
  * - 'leave': Member departs circle, freeing their slot; auto-elects replacement captain if needed.
  * - 'transferCaptain': Captain transfers role to another roster member (with cancel support).
- * - 'showup': Physical attendee check-in at venue ground, updating venue showups list.
- * - 'switchCircle': Moves attendee to another circle:
+ * - 'showup': Physical attendee check-in at venue ground, updating that night's showups list.
+ * - 'switchCircle': Moves attendee to another circle, chosen by `newSkillLevel` (same venue and
+ *   night) or an explicit `targetCircleId`:
  *   - Capped at 3 switches per night (SWITCH_CIRCLE_MAX_PER_NIGHT = 3).
  *   - Locked for first 5 minutes after joining (SWITCH_CIRCLE_LOCK_MINUTES = 5).
  *   - 20-minute cooldown between subsequent switches (SWITCH_CIRCLE_COOLDOWN_MINUTES = 20).
@@ -21,18 +25,19 @@ const {
   SWITCH_CIRCLE_LOCK_MINUTES,
   SWITCH_CIRCLE_COOLDOWN_MINUTES,
   SOFT_MAX_GROUP,
+  SKILL_TIERS,
 } = require('../../shared/constants');
 const { successResponse, errorResponse, handleOptions } = require('../../shared/response');
-const { checkGenderCap } = require('../../shared/matching');
+const { checkGenderCap, shouldStartNewBucket } = require('../../shared/matching');
+const {
+  createCircleState,
+  adjustGenderCount,
+  ensureCaptain,
+  circleSummary,
+} = require('../../shared/circles');
+const { requireAttendee } = require('../../shared/session');
 const db = require('../../shared/db');
 
-/**
- * Netlify Function Handler: Dispatches circle management actions.
- *
- * @param {Object} event - Netlify HTTP event.
- * @param {Object} context - Netlify execution context.
- * @returns {Promise<Object>} Netlify HTTP response.
- */
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return handleOptions();
@@ -49,27 +54,33 @@ exports.handler = async (event, context) => {
     return errorResponse('Invalid JSON body in request payload.', 400);
   }
 
-  const { action, circleId, registrationId } = body;
+  const { action, registrationId } = body;
   if (!action || typeof action !== 'string') {
     return errorResponse("Missing required 'action' parameter.", 400);
+  }
+
+  // Caller must hold a verified session and act on their own registration
+  const caller = requireAttendee(event);
+  if (caller.response) return caller.response;
+  if (!registrationId) {
+    return errorResponse("registrationId is required for circle actions.", 400);
   }
 
   const now = Date.now();
 
   try {
+    const registration = await db.getRegistration(registrationId);
+    if (!registration || registration.whatsapp !== caller.phone) {
+      return errorResponse('This registration does not belong to the verified number.', 403);
+    }
+
     // -------------------------------------------------------------------------
     // ACTION: SHOWUP (Venue gate check-in)
     // -------------------------------------------------------------------------
     if (action === 'showup') {
-      const { city, venue, gate } = body;
-      if (!city || !venue || !registrationId) {
-        return errorResponse("Missing required parameters for 'showup': city, venue, registrationId.", 400);
-      }
-
-      const showups = (await db.getShowups(city, venue)) || [];
-      const alreadyCheckedIn = showups.some((s) => s.registrationId === registrationId);
-
-      if (alreadyCheckedIn) {
+      const { city, venue, eventDate } = registration;
+      const showups = (await db.getShowups(city, venue, eventDate)) || [];
+      if (showups.some((s) => s.registrationId === registrationId)) {
         return successResponse({
           message: 'Attendee already checked in.',
           alreadyCheckedIn: true,
@@ -77,17 +88,15 @@ exports.handler = async (event, context) => {
         });
       }
 
-      const newCheckin = {
-        registrationId,
-        circleId: circleId || null,
-        checkedInAt: now,
-        gate: gate || 'Main Gate',
-      };
-
-      const showupDocId = db.getShowupDocId(city, venue);
-      const showupRef = db.getDocRef('showups', showupDocId);
-      await showupRef.set(
-        { showupsArray: db.FieldValue.arrayUnion(newCheckin) },
+      await db.getDocRef('showups', db.getShowupDocId(city, venue, eventDate)).set(
+        {
+          showupsArray: db.FieldValue.arrayUnion({
+            registrationId,
+            circleId: registration.circleId || null,
+            checkedInAt: now,
+            gate: body.gate || 'Main Gate',
+          }),
+        },
         { merge: true }
       );
 
@@ -98,9 +107,13 @@ exports.handler = async (event, context) => {
       });
     }
 
-    // All subsequent actions require circleId and an existing circleState
+    // All other actions work on the caller's current circle
+    const circleId = body.circleId || registration.circleId;
     if (!circleId) {
-      return errorResponse("circleId is required for this action.", 400);
+      return errorResponse('circleId is required for this action.', 400);
+    }
+    if (registration.circleId !== circleId) {
+      return errorResponse('You are not a member of this circle.', 403);
     }
 
     const circle = await db.getCircleState(circleId);
@@ -108,12 +121,19 @@ exports.handler = async (event, context) => {
       return errorResponse(`Circle '${circleId}' not found.`, 404);
     }
 
+    const requireCaptain = () =>
+      circle.captainId === registrationId
+        ? null
+        : errorResponse('Only the Circle Captain can do this.', 403);
+
     // -------------------------------------------------------------------------
     // ACTION: GROW (Open 1-20 additional spots, unlock circle)
     // -------------------------------------------------------------------------
     if (action === 'grow') {
-      const additionalSpots = parseInt(body.spots, 10) || 5;
+      const notCaptain = requireCaptain();
+      if (notCaptain) return notCaptain;
 
+      const additionalSpots = parseInt(body.spots, 10) || 5;
       if (additionalSpots < GROW_MIN_SPOTS || additionalSpots > GROW_MAX_SPOTS) {
         return errorResponse(
           `Can only grow between ${GROW_MIN_SPOTS} and ${GROW_MAX_SPOTS} spots. Requested: ${additionalSpots}.`,
@@ -125,7 +145,6 @@ exports.handler = async (event, context) => {
       circle.isLocked = false; // Growing unlocks the circle
       circle.status = 'active';
       circle.updatedAt = now;
-
       await db.saveCircleState(circleId, circle);
 
       return successResponse({
@@ -138,14 +157,15 @@ exports.handler = async (event, context) => {
     }
 
     // -------------------------------------------------------------------------
-    // ACTION: LOCK (Close circle to new attendees)
+    // ACTION: LOCK
     // -------------------------------------------------------------------------
     if (action === 'lock') {
+      const notCaptain = requireCaptain();
+      if (notCaptain) return notCaptain;
+
       circle.isLocked = true;
-      circle.status = 'locked';
       circle.lockedAt = now;
       circle.updatedAt = now;
-
       await db.saveCircleState(circleId, circle);
 
       return successResponse({
@@ -156,58 +176,40 @@ exports.handler = async (event, context) => {
     }
 
     // -------------------------------------------------------------------------
-    // ACTION: LEAVE (Member leaves circle)
+    // ACTION: LEAVE
     // -------------------------------------------------------------------------
     if (action === 'leave') {
-      if (!registrationId) {
-        return errorResponse("registrationId is required to leave a circle.", 400);
-      }
-
       return await db.runTransaction(async (transaction) => {
         const circleRef = db.getDocRef('circles', circleId);
         const circleDoc = await transaction.get(circleRef);
         if (!circleDoc.exists) {
           return errorResponse(`Circle '${circleId}' not found.`, 404);
         }
-        const circleData = circleDoc.data();
 
+        const circleData = circleDoc.data();
         const memberIndex = circleData.members.findIndex((m) => m.registrationId === registrationId);
         if (memberIndex === -1) {
-          return errorResponse("Attendee is not currently a member of this circle.", 404);
+          return errorResponse('Attendee is not currently a member of this circle.', 404);
         }
 
-        const leavingMember = circleData.members[memberIndex];
-        circleData.members.splice(memberIndex, 1);
+        const [leavingMember] = circleData.members.splice(memberIndex, 1);
         circleData.totalCount = circleData.members.length;
+        adjustGenderCount(circleData, leavingMember.gender, -1);
 
-        if (leavingMember.gender === 'male') circleData.maleCount = Math.max(0, (circleData.maleCount || 1) - 1);
-        else if (leavingMember.gender === 'female') circleData.femaleCount = Math.max(0, (circleData.femaleCount || 1) - 1);
-        else circleData.otherCount = Math.max(0, (circleData.otherCount || 1) - 1);
-
-        // If the leaving member was the Captain, designate a replacement
         let newCaptainName = null;
         if (circleData.captainId === registrationId) {
-          const replacement = circleData.members.find((m) => m.captainOptIn) || circleData.members[0];
-          if (replacement) {
-            circleData.captainId = replacement.registrationId;
-            circleData.captainName = replacement.name;
-            replacement.isCaptain = true;
-            newCaptainName = replacement.name;
-          } else {
-            circleData.captainId = null;
-            circleData.captainName = null;
-          }
+          circleData.captainId = null;
+          ensureCaptain(circleData);
+          newCaptainName = circleData.captainName;
         }
-
         circleData.updatedAt = now;
-        transaction.set(circleRef, circleData, { merge: true });
 
-        // Clear circle association on registration
-        const regRef = db.getDocRef('registrations', registrationId);
-        const regDoc = await transaction.get(regRef);
-        if (regDoc.exists) {
-          transaction.set(regRef, { circleId: null, updatedAt: now }, { merge: true });
-        }
+        transaction.set(circleRef, circleData, { merge: true });
+        transaction.set(
+          db.getDocRef('registrations', registrationId),
+          { circleId: null, updatedAt: now },
+          { merge: true }
+        );
 
         return successResponse({
           message: 'Left circle successfully.',
@@ -222,16 +224,14 @@ exports.handler = async (event, context) => {
     // ACTION: TRANSFER CAPTAIN
     // -------------------------------------------------------------------------
     if (action === 'transferCaptain') {
-      const { currentCaptainId, newCaptainId, cancelTransfer } = body;
+      const notCaptain = requireCaptain();
+      if (notCaptain) return notCaptain;
 
+      const { newCaptainId, cancelTransfer } = body;
       if (cancelTransfer) {
         circle.pendingCaptainTransfer = null;
         await db.saveCircleState(circleId, circle);
         return successResponse({ message: 'Captain transfer cancelled.', circleId });
-      }
-
-      if (circle.captainId && circle.captainId !== currentCaptainId) {
-        return errorResponse('Only the current Circle Captain can transfer leadership.', 403);
       }
 
       const targetMember = circle.members.find((m) => m.registrationId === newCaptainId);
@@ -239,14 +239,12 @@ exports.handler = async (event, context) => {
         return errorResponse('Target member is not in this circle roster.', 404);
       }
 
-      // Reassign Captain
-      for (const m of circle.members) {
+      circle.members.forEach((m) => {
         m.isCaptain = m.registrationId === newCaptainId;
-      }
+      });
       circle.captainId = targetMember.registrationId;
       circle.captainName = targetMember.name;
       circle.updatedAt = now;
-
       await db.saveCircleState(circleId, circle);
 
       return successResponse({
@@ -258,52 +256,80 @@ exports.handler = async (event, context) => {
     }
 
     // -------------------------------------------------------------------------
-    // ACTION: SWITCH CIRCLE
+    // ACTION: SWITCH CIRCLE (by skill level, or to a specific circle)
     // -------------------------------------------------------------------------
     if (action === 'switchCircle') {
-      const { targetCircleId } = body;
-      if (!registrationId || !targetCircleId) {
-        return errorResponse("Missing required parameters: registrationId, targetCircleId.", 400);
+      const { newSkillLevel, targetCircleId } = body;
+      if (!newSkillLevel && !targetCircleId) {
+        return errorResponse('Choose a skill level (newSkillLevel) or a targetCircleId to switch to.', 400);
+      }
+      if (newSkillLevel && !SKILL_TIERS.includes(newSkillLevel)) {
+        return errorResponse(`newSkillLevel must be one of: ${SKILL_TIERS.join(', ')}.`, 400);
+      }
+      if (newSkillLevel && newSkillLevel === circle.skillLevel) {
+        return errorResponse('You are already in a circle at this skill level.', 400);
+      }
+      if (targetCircleId && targetCircleId === circleId) {
+        return errorResponse('Attendee is already in target circle.', 400);
       }
 
-      if (circleId === targetCircleId) {
-        return errorResponse("Attendee is already in target circle.", 400);
-      }
+      const genderPref = circle.isAllWomen ? 'allWomen' : 'mixed';
 
       return await db.runTransaction(async (transaction) => {
-        const sourceCircleRef = db.getDocRef('circles', circleId);
-        const targetCircleRef = db.getDocRef('circles', targetCircleId);
+        const sourceRef = db.getDocRef('circles', circleId);
         const regRef = db.getDocRef('registrations', registrationId);
 
-        // All reads must happen first in Firestore transactions
-        const [sourceDoc, targetDoc, regDoc] = await Promise.all([
-          transaction.get(sourceCircleRef),
-          transaction.get(targetCircleRef),
-          transaction.get(regRef),
-        ]);
-
+        // Reads first (Firestore transactions require all reads before writes)
+        const sourceDoc = await transaction.get(sourceRef);
+        const regDoc = await transaction.get(regRef);
         if (!sourceDoc.exists) {
           return errorResponse(`Source circle '${circleId}' not found.`, 404);
         }
-        if (!targetDoc.exists) {
-          return errorResponse(`Target circle '${targetCircleId}' not found.`, 404);
+        const sourceCircle = sourceDoc.data();
+        const reg = regDoc.exists ? regDoc.data() : registration;
+
+        let targetRef;
+        let targetCircle = null;
+        let groupStateRef = null;
+        let groupState = null;
+
+        if (targetCircleId) {
+          targetRef = db.getDocRef('circles', targetCircleId);
+          const targetDoc = await transaction.get(targetRef);
+          if (!targetDoc.exists) {
+            return errorResponse(`Target circle '${targetCircleId}' not found.`, 404);
+          }
+          targetCircle = targetDoc.data();
+          if (
+            targetCircle.city !== sourceCircle.city ||
+            targetCircle.venue !== sourceCircle.venue ||
+            targetCircle.eventDate !== sourceCircle.eventDate
+          ) {
+            return errorResponse('You can only switch to a circle at the same venue and night.', 400);
+          }
+        } else {
+          // Same venue and night, new level: the level's open circle, or a new one
+          groupStateRef = db.getDocRef(
+            'groupstate',
+            db.getGroupStateDocId(circle.city, circle.venue, newSkillLevel, genderPref, circle.eventDate)
+          );
+          const groupStateDoc = await transaction.get(groupStateRef);
+          groupState = groupStateDoc.exists ? groupStateDoc.data() : {};
+          if (groupState.activeCircleId) {
+            targetRef = db.getDocRef('circles', groupState.activeCircleId);
+            const activeDoc = await transaction.get(targetRef);
+            targetCircle = activeDoc.exists ? activeDoc.data() : null;
+          }
         }
 
-        const sourceCircle = sourceDoc.data();
-        const targetCircle = targetDoc.data();
-        const reg = regDoc.exists ? regDoc.data() : null;
-
-        // Member check in source circle
         const memberIndex = sourceCircle.members.findIndex((m) => m.registrationId === registrationId);
         if (memberIndex === -1) {
-          return errorResponse("Attendee is not currently in source circle.", 404);
+          return errorResponse('Attendee is not currently in source circle.', 404);
         }
         const member = sourceCircle.members[memberIndex];
 
-        // Check switch limits and cooldowns
-        const switchHistory = reg?.switchHistory || [];
-
-        // Rule 1: Max 3 switches per night
+        // Switching limits
+        const switchHistory = reg.switchHistory || [];
         if (switchHistory.length >= SWITCH_CIRCLE_MAX_PER_NIGHT) {
           return errorResponse(
             `Maximum of ${SWITCH_CIRCLE_MAX_PER_NIGHT} circle switches reached for tonight.`,
@@ -311,10 +337,7 @@ exports.handler = async (event, context) => {
             { switchesUsed: switchHistory.length, maxSwitches: SWITCH_CIRCLE_MAX_PER_NIGHT }
           );
         }
-
-        // Rule 2: Lock-in for first 5 minutes after joining
-        const joinedAt = member.joinedAt || sourceCircle.createdAt || now;
-        const minutesSinceJoin = (now - joinedAt) / 60000;
+        const minutesSinceJoin = (now - (member.joinedAt || sourceCircle.createdAt || now)) / 60000;
         if (minutesSinceJoin < SWITCH_CIRCLE_LOCK_MINUTES) {
           const waitMinutes = Math.ceil(SWITCH_CIRCLE_LOCK_MINUTES - minutesSinceJoin);
           return errorResponse(
@@ -323,11 +346,8 @@ exports.handler = async (event, context) => {
             { minutesRemaining: waitMinutes }
           );
         }
-
-        // Rule 3: 20-minute cooldown between subsequent switches
         if (switchHistory.length > 0) {
-          const lastSwitchAt = switchHistory[switchHistory.length - 1].timestamp;
-          const minutesSinceLastSwitch = (now - lastSwitchAt) / 60000;
+          const minutesSinceLastSwitch = (now - switchHistory[switchHistory.length - 1].timestamp) / 60000;
           if (minutesSinceLastSwitch < SWITCH_CIRCLE_COOLDOWN_MINUTES) {
             const waitMinutes = Math.ceil(SWITCH_CIRCLE_COOLDOWN_MINUTES - minutesSinceLastSwitch);
             return errorResponse(
@@ -338,83 +358,106 @@ exports.handler = async (event, context) => {
           }
         }
 
-        if (targetCircle.isLocked || targetCircle.status === 'locked' || targetCircle.status === 'closed') {
-          return errorResponse("Target circle is currently locked to new members.", 403);
-        }
+        const cannotJoin = (c) =>
+          !c ||
+          c.status !== 'active' ||
+          c.isLocked ||
+          c.totalCount >= (c.maxSpots || SOFT_MAX_GROUP) ||
+          checkGenderCap({ male: c.maleCount, female: c.femaleCount }, member.gender, c.isAllWomen);
 
-        if (targetCircle.totalCount >= (targetCircle.maxSpots || SOFT_MAX_GROUP)) {
-          return errorResponse("Target circle has reached capacity.", 403);
+        let createdNewCircle = false;
+        if (targetCircleId) {
+          if (targetCircle.isLocked || targetCircle.status !== 'active') {
+            return errorResponse('Target circle is currently locked to new members.', 403);
+          }
+          if (targetCircle.totalCount >= (targetCircle.maxSpots || SOFT_MAX_GROUP)) {
+            return errorResponse('Target circle has reached capacity.', 403);
+          }
+          if (
+            checkGenderCap(
+              { male: targetCircle.maleCount, female: targetCircle.femaleCount },
+              member.gender,
+              targetCircle.isAllWomen
+            )
+          ) {
+            return errorResponse('Target circle has reached the gender balance limit for this group.', 403);
+          }
+        } else if (cannotJoin(targetCircle) || shouldStartNewBucket(targetCircle)) {
+          const index = (groupState.lastCircleCounter || 0) + 1;
+          targetCircle = createCircleState({
+            level: newSkillLevel,
+            genderPref,
+            index,
+            city: circle.city,
+            venue: circle.venue,
+            eventDate: circle.eventDate,
+            now,
+            chatLinkPrefix: circle.origin === 'advance' ? 'adv' : 'demo',
+            origin: circle.origin || 'live',
+          });
+          targetRef = db.getDocRef('circles', targetCircle.circleId);
+          groupState = { ...groupState, lastCircleCounter: index };
+          createdNewCircle = true;
         }
+        const finalTargetId = targetCircle.circleId;
 
-        // Gender cap evaluation on target circle
-        const genderViolated = checkGenderCap(
-          { male: targetCircle.maleCount, female: targetCircle.femaleCount },
-          member.gender,
-          targetCircle.isAllWomen
-        );
-        if (genderViolated) {
-          return errorResponse("Target circle has reached the gender balance limit for this group.", 403);
-        }
-
-        // Execute transfer: remove from source
+        // Move the member
         sourceCircle.members.splice(memberIndex, 1);
         sourceCircle.totalCount = sourceCircle.members.length;
-        if (member.gender === 'male') sourceCircle.maleCount = Math.max(0, (sourceCircle.maleCount || 1) - 1);
-        else if (member.gender === 'female') sourceCircle.femaleCount = Math.max(0, (sourceCircle.femaleCount || 1) - 1);
-        else sourceCircle.otherCount = Math.max(0, (sourceCircle.otherCount || 1) - 1);
-
+        adjustGenderCount(sourceCircle, member.gender, -1);
         if (sourceCircle.captainId === registrationId) {
-          const rep = sourceCircle.members.find((m) => m.captainOptIn) || sourceCircle.members[0];
-          sourceCircle.captainId = rep ? rep.registrationId : null;
-          sourceCircle.captainName = rep ? rep.name : null;
-          if (rep) rep.isCaptain = true;
+          sourceCircle.captainId = null;
+          ensureCaptain(sourceCircle);
         }
         sourceCircle.updatedAt = now;
 
-        // Add to target
-        const transferredMember = {
+        const movedMember = {
           ...member,
+          skillLevel: newSkillLevel || member.skillLevel,
           isCaptain: false,
           joinedAt: now,
         };
-        targetCircle.members.push(transferredMember);
+        targetCircle.members = [...(targetCircle.members || []), movedMember];
         targetCircle.totalCount = targetCircle.members.length;
-        if (member.gender === 'male') targetCircle.maleCount = (targetCircle.maleCount || 0) + 1;
-        else if (member.gender === 'female') targetCircle.femaleCount = (targetCircle.femaleCount || 0) + 1;
-        else targetCircle.otherCount = (targetCircle.otherCount || 0) + 1;
+        adjustGenderCount(targetCircle, member.gender, 1);
+        ensureCaptain(targetCircle);
         targetCircle.updatedAt = now;
 
-        // Update attendee registration with switch history
-        switchHistory.push({
-          fromCircleId: circleId,
-          toCircleId: targetCircleId,
-          timestamp: now,
-        });
+        switchHistory.push({ fromCircleId: circleId, toCircleId: finalTargetId, timestamp: now });
 
-        // Atomic writes in transaction
-        transaction.set(sourceCircleRef, sourceCircle, { merge: true });
-        transaction.set(targetCircleRef, targetCircle, { merge: true });
-        if (regDoc.exists) {
-          transaction.set(regRef, {
-            circleId: targetCircleId,
+        transaction.set(sourceRef, sourceCircle, { merge: true });
+        transaction.set(targetRef, targetCircle, { merge: true });
+        transaction.set(
+          regRef,
+          {
+            circleId: finalTargetId,
+            ...(newSkillLevel ? { skillLevel: newSkillLevel } : {}),
             switchHistory,
             updatedAt: now,
-          }, { merge: true });
+          },
+          { merge: true }
+        );
+        if (groupStateRef) {
+          transaction.set(
+            groupStateRef,
+            {
+              activeCircleId: finalTargetId,
+              lastCircleCounter: groupState.lastCircleCounter || 0,
+              ...(createdNewCircle ? { circleIds: db.FieldValue.arrayUnion(finalTargetId) } : {}),
+              updatedAt: now,
+            },
+            { merge: true }
+          );
         }
 
         return successResponse({
-          message: `Successfully switched from ${circleId} to ${targetCircleId}.`,
-          newCircleId: targetCircleId,
-          newCircle: {
-            ...targetCircle,
-            circleId: targetCircle.circleId || targetCircleId,
-            id: targetCircle.circleId || targetCircleId,
-          },
+          message: `Switched to ${targetCircle.name}.`,
+          newCircleId: finalTargetId,
+          newCircle: circleSummary(targetCircle, registrationId),
           switchesRemaining: SWITCH_CIRCLE_MAX_PER_NIGHT - switchHistory.length,
         });
       });
     }
-
 
     return errorResponse(`Unknown circle action '${action}'.`, 400);
   } catch (error) {

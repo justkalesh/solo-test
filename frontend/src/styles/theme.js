@@ -108,6 +108,14 @@ export const lightTheme = deepFreeze({
     ...shared.accent,
     liveGreen: '#22A855',
 
+    // Accents as text: the bright accents are unreadable on light surfaces, so light mode uses
+    // darker versions (>= 4.5:1). Use these for `color:`, the plain accents for fills and borders.
+    goldText: '#8A5A00',
+    amberText: '#8A5410',
+    cyanText: '#00707A',
+    pinkText: '#B01D5E',
+    liveGreenText: '#157A3C',
+
     // Skill Level Backgrounds
     beginnerBg: '#EDFBF2',
     intermediateBg: '#FFF6E8',
@@ -127,9 +135,9 @@ export const lightTheme = deepFreeze({
     // Text & Content
     textPrimary: '#2D1810',
     textMuted: '#6B5C4F',
-    textSecondary: '#8B7B6E',
+    textSecondary: '#7A6A5D',
     textPlaceholder: '#B8A89A',
-    textDark: '#FFFFFF',
+    textDark: '#1B1730',
     textDisabled: '#B8A89A',
     textLabel: '#8B5E3C',
     // For surfaces that stay dark in both themes (e.g. gradients.ctaCard)
@@ -228,6 +236,13 @@ export const darkTheme = deepFreeze({
     ...shared.accent,
     liveGreen: '#3EE07A',
 
+    // Accents as text (same as the accents in dark mode; see lightTheme)
+    goldText: shared.accent.gold,
+    amberText: shared.accent.amber,
+    cyanText: shared.accent.cyan,
+    pinkText: shared.accent.pink,
+    liveGreenText: '#3EE07A',
+
     // Skill Level Backgrounds
     beginnerBg: '#122A1B',
     intermediateBg: '#2E2410',
@@ -247,7 +262,7 @@ export const darkTheme = deepFreeze({
     // Text & Content
     textPrimary: '#F3EDE0',
     textMuted: '#B9AFD1',
-    textSecondary: '#8A81A8',
+    textSecondary: '#938AB1',
     textPlaceholder: '#6E6590',
     textDark: '#1B1730',
     textDisabled: '#8A81A8',

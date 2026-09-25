@@ -107,7 +107,7 @@ export function CircleMemberList({
                   >
                     <span>{member.name || `Dancer ${idx + 1}`}</span>
                     {isSelf && (
-                      <span style={{ fontSize: '11px', color: theme.colors.amber, fontWeight: 700 }}>
+                      <span style={{ fontSize: '11px', color: theme.colors.amberText, fontWeight: 700 }}>
                         (You)
                       </span>
                     )}

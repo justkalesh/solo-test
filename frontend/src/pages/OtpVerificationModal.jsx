@@ -14,7 +14,7 @@ import { apiPost } from '../api/apiClient';
  * Enforces:
  * - 10-digit Indian phone format (/^[6-9]\d{9}$/)
  * - 30-second resend cooldown countdown
- * - Hard lockout detection (5 wrong attempts burns code permanently)
+ * - Lockout detection (5 wrong attempts lock the number for 15 minutes)
  * - Remaining attempts tracking (details.attemptsRemaining)
  */
 export function OtpVerificationModal({
@@ -211,18 +211,19 @@ export function OtpVerificationModal({
         {isHardBlocked && (
           <div
             style={{
-              background: '#3A141A',
-              border: '0.5px solid #F43F5E',
+              background: theme.colors.surfaceElevated,
+              border: `0.5px solid ${theme.colors.borderDanger}`,
               borderRadius: '12px',
               padding: '14px',
               fontSize: '12px',
-              color: '#FFA1B2',
+              color: theme.colors.textDanger,
               lineHeight: 1.5,
               marginBottom: '16px',
               textAlign: 'center',
             }}
           >
-            <strong>⚠️ Security Lockout:</strong> This code is permanently blocked after 5 failed tries to protect attendees against ticket fraud. Please request a fresh OTP to proceed.
+            <strong>⚠️ Security Lockout:</strong> Too many wrong codes. For your security, this number
+            is locked for 15 minutes. After that, request a new code.
           </div>
         )}
 
@@ -258,7 +259,7 @@ export function OtpVerificationModal({
                 style={{
                   padding: '11px 12px',
                   background: 'rgba(255,255,255,0.04)',
-                  color: theme.colors.amber,
+                  color: theme.colors.amberText,
                   fontFamily: theme.fonts.mono,
                   fontSize: '13px',
                   fontWeight: 600,
@@ -363,7 +364,10 @@ export function OtpVerificationModal({
             >
               <button
                 type="button"
-                onClick={() => setStep('phone')}
+                onClick={() => {
+                  setStep('phone');
+                  setIsHardBlocked(false);
+                }}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -382,7 +386,7 @@ export function OtpVerificationModal({
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: cooldown > 0 ? theme.colors.textPlaceholder : theme.colors.amber,
+                  color: cooldown > 0 ? theme.colors.textPlaceholder : theme.colors.amberText,
                   cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
                   padding: '12px 4px',

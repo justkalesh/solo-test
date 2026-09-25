@@ -11,7 +11,10 @@ import Portal from '../common/Portal';
  * Performance Architecture:
  * - 100% CSS animation driven via `@keyframes beaconPulse`
  * - Battery-conscious: zero JS `setInterval` renders
- * - Hardware accelerated (`opacity`, `transform`)
+ * - Hardware accelerated (`opacity` only)
+ *
+ * Only the color layer pulses. It sits on an opaque black base, so the page underneath
+ * never shows through, and the panels and buttons above it stay perfectly still.
  */
 export function BeaconPulse({
   level = 'intermediate',
@@ -27,6 +30,17 @@ export function BeaconPulse({
   const pulseColor = matchedLevel.color;
   const cycleSeconds = isFast ? '0.6s' : '2.2s';
 
+  const panelStyle = {
+    position: 'relative',
+    background: 'rgba(27, 23, 48, 0.75)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '16px',
+    textAlign: 'center',
+    color: theme.colors.textOnDark,
+    border: '0.5px solid rgba(255,255,255,0.2)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+  };
+
   return (
     <Portal>
     <div
@@ -36,7 +50,7 @@ export function BeaconPulse({
         position: 'fixed',
         inset: 0,
         zIndex: 200,
-        backgroundColor: pulseColor,
+        backgroundColor: '#000000',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -44,24 +58,23 @@ export function BeaconPulse({
         padding:
           'max(40px, env(safe-area-inset-top)) 20px max(40px, env(safe-area-inset-bottom))',
         boxSizing: 'border-box',
-        animation: `beaconPulse ${cycleSeconds} ease-in-out infinite`,
         userSelect: 'none',
         WebkitTapHighlightColor: 'transparent',
       }}
     >
-      {/* Top Circle Details */}
+      {/* Pulsing color layer (the only animated element) */}
       <div
+        aria-hidden="true"
         style={{
-          background: 'rgba(27, 23, 48, 0.75)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '16px',
-          padding: '12px 24px',
-          textAlign: 'center',
-          color: theme.colors.textOnDark,
-          border: '0.5px solid rgba(255,255,255,0.2)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: pulseColor,
+          animation: `beaconPulse ${cycleSeconds} ease-in-out infinite`,
         }}
-      >
+      />
+
+      {/* Top Circle Details */}
+      <div style={{ ...panelStyle, padding: '12px 24px' }}>
         <div style={{ fontFamily: theme.fonts.heading, fontSize: '20px', fontWeight: 700 }}>
           {circleName}
         </div>
@@ -73,28 +86,26 @@ export function BeaconPulse({
       {/* Center Beacon Motif / Prompt */}
       <div
         style={{
+          ...panelStyle,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '8px',
-          color: '#1B1730',
-          textAlign: 'center',
+          padding: '16px 20px',
+          maxWidth: '320px',
         }}
       >
-        <div style={{ fontSize: '64px', filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.3))' }}>
-          🪩
-        </div>
+        <div style={{ fontSize: '56px', lineHeight: 1 }}>🪩</div>
         <div
           style={{
             fontFamily: theme.fonts.heading,
             fontSize: '22px',
             fontWeight: 700,
-            textShadow: '0 1px 4px rgba(255,255,255,0.6)',
           }}
         >
           Hold Phone Up High!
         </div>
-        <p style={{ fontSize: '13px', fontWeight: 600, maxWidth: '280px', margin: 0 }}>
+        <p style={{ fontSize: '13px', fontWeight: 600, margin: 0, color: theme.colors.textOnDarkMuted }}>
           Your circle members are looking for this {matchedLevel.label} glow.
         </p>
       </div>
@@ -102,6 +113,7 @@ export function BeaconPulse({
       {/* Bottom Controls */}
       <div
         style={{
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -115,7 +127,7 @@ export function BeaconPulse({
           type="button"
           onClick={() => setIsFast(!isFast)}
           style={{
-            background: 'rgba(255, 255, 255, 0.85)',
+            background: 'rgba(255, 255, 255, 0.92)',
             color: '#1B1730',
             fontFamily: theme.fonts.body,
             fontWeight: 700,
@@ -126,7 +138,6 @@ export function BeaconPulse({
             border: 'none',
             cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-            transition: 'transform 0.15s ease',
           }}
         >
           {isFast ? '⚡ Slower Pulse (2.2s)' : '⚡ Faster Pulse (0.6s)'}

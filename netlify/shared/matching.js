@@ -3,52 +3,68 @@
  * @description Core Circle Matching Engine and Group Partitioning Logic for SoloSaathi Circle.
  *
  * Implements business algorithms governing:
- * - Deterministic Circle ID naming (`{PREFIX}-{2-digit index}`).
+ * - Deterministic Circle IDs, unique per venue and night (`{PREFIX}-{2-digit index}_{partition}`).
  * - Partition key resolution for Netlify Blobs storage (`groupstate:` vs `pending:`).
  * - Capacity threshold checking (`SOFT_MAX_GROUP = 24`).
  * - Strict gender balancing caps (`GENDER_CAP = 10` per declared gender in mixed circles).
- * - Multi-tier skill level grouping with adjacent-level fallback rules.
+ * - Small-circle merge planning across neighbouring skill tiers.
  * - Operational festival time-window evaluations (IST daily window and 2h advance cutoff).
  */
 
 const {
   GENDER_CAP,
-  ALL_WOMEN_MIN_FLOOR,
-  ALL_WOMEN_ABSOLUTE_MIN,
   SOFT_MAX_GROUP,
   LIVE_SEASON_START_DATE,
   LIVE_DAILY_WINDOW,
+  EVENT_START_TIME_IST,
+  SMALL_CIRCLE_MAX_MEMBERS,
+  MERGE_RECEIVER_MAX_MEMBERS,
+  SKILL_TIERS,
   CIRCLE_PREFIX,
 } = require('./constants');
+const { compositeKey } = require('./keys');
 
 /**
- * Generates a standard Circle ID string based on skill level, gender preference, and bucket index.
+ * Returns the circle name prefix for a level / gender preference.
+ * 'allWomen' -> SAKHI, 'beginner' -> GARBA, 'intermediate' -> TAAL, 'advanced' -> RAAS.
  *
- * Format: `{PREFIX}-{2-digit index}`
- * Prefixes:
- * - 'allWomen' -> SAKHI
- * - 'beginner' -> GARBA
- * - 'intermediate' -> TAAL
- * - 'advanced' -> RAAS
+ * @param {string} level - Skill level.
+ * @param {string} genderPref - 'mixed' or 'allWomen'.
+ * @returns {string} Prefix.
+ */
+function getCirclePrefix(level, genderPref) {
+  if (genderPref === 'allWomen') return CIRCLE_PREFIX.allWomen;
+  return (level && CIRCLE_PREFIX[level]) || CIRCLE_PREFIX.beginner;
+}
+
+/**
+ * Generates a Circle ID that is unique per venue and festival night.
+ *
+ * Format: `{PREFIX}-{2-digit index}_{city}_{venue}_{date}`, e.g.
+ * 'TAAL-01_ahmedabad_united_way_garba_grounds_2026_10_17'. The partition suffix matters:
+ * the index restarts at 01 for every venue and night, so without it circles overwrite each other.
  *
  * @param {string} level - Skill level ('beginner', 'intermediate', 'advanced').
  * @param {string} genderPref - Circle gender preference ('mixed' or 'allWomen').
  * @param {number|string} index - Numeric sequence index for the circle.
- * @returns {string} Formatted Circle ID (e.g., 'GARBA-01', 'TAAL-04', 'SAKHI-02').
+ * @param {{city: string, venue: string, eventDate: string}} partition - Where and when the circle meets.
+ * @returns {string} Circle ID.
  */
-function buildCircleId(level, genderPref, index) {
-  let prefix = CIRCLE_PREFIX.beginner;
+function buildCircleId(level, genderPref, index, { city, venue, eventDate }) {
+  const paddedIndex = String(parseInt(index, 10) || 1).padStart(2, '0');
+  return `${getCirclePrefix(level, genderPref)}-${paddedIndex}_${compositeKey(city, venue, eventDate)}`;
+}
 
-  if (genderPref === 'allWomen') {
-    prefix = CIRCLE_PREFIX.allWomen;
-  } else if (level && CIRCLE_PREFIX[level]) {
-    prefix = CIRCLE_PREFIX[level];
-  }
-
-  const numIndex = parseInt(index, 10) || 1;
-  const paddedIndex = String(numIndex).padStart(2, '0');
-
-  return `${prefix}-${paddedIndex}`;
+/**
+ * Display name for a circle, e.g. 'TAAL 01'.
+ *
+ * @param {string} level - Skill level.
+ * @param {string} genderPref - 'mixed' or 'allWomen'.
+ * @param {number|string} index - Numeric sequence index for the circle.
+ * @returns {string} Display name.
+ */
+function buildCircleName(level, genderPref, index) {
+  return `${getCirclePrefix(level, genderPref)} ${String(parseInt(index, 10) || 1).padStart(2, '0')}`;
 }
 
 /**
@@ -149,86 +165,78 @@ function checkGenderCap(currentCounts = {}, newGender, isAllWomen = false) {
 }
 
 /**
- * Resolves skill level grouping decisions according to strict matching priority rules.
+ * Plans how small circles merge before an event (the "12 hours before" step).
  *
- * Priority Order:
- * 1. Same-level matching first (beginner with beginner, intermediate with intermediate, advanced with advanced).
- * 2. If counts are insufficient, combine adjacent skill levels only:
- *    - [beginner + intermediate] OR [intermediate + advanced].
- * 3. NEVER combine beginner and advanced directly.
+ * Rules:
+ * - A circle is small when it has 1 to SMALL_CIRCLE_MAX_MEMBERS (3) members.
+ * - A small circle moves into a receiver with at most MERGE_RECEIVER_MAX_MEMBERS (10) members:
+ *   same skill tier first, otherwise a neighbouring tier (beginner <-> intermediate <-> advanced).
+ *   Beginner and advanced are never merged directly.
+ * - Among eligible neighbours the fuller one wins (closer to a full circle); ties go to the lower tier.
+ * - Receivers must stay within SOFT_MAX_GROUP and, for mixed circles, the gender cap.
+ * - Smallest circles move first and sizes are updated after every move, so a receiver that has
+ *   grown past 10 stops receiving. A small circle can itself be a receiver.
+ * - Call it once per venue, night and category (mixed or all-women) so all-women circles only
+ *   merge with each other.
  *
- * @param {Object<string, number>} countsByLevel - Headcount per skill level: { beginner: X, intermediate: Y, advanced: Z }.
- * @param {number} [targetGroupSize=16] - Target headcount to finalize a circle.
- * @returns {Array<{levels: string[], count: number, strategy: 'exact'|'adjacent_merged'|'waitlist'}>} Grouping decisions.
+ * @param {Array<{circleId: string, skillLevel: string, size: number, maleCount?: number, femaleCount?: number, isAllWomen?: boolean}>} circles
+ * @returns {{moves: Array<{from: string, to: string}>, flagged: string[]}} Moves in the order to apply
+ *   them, and small circles that had no eligible receiver.
  */
-function resolveSkillLevelGrouping(countsByLevel = {}, targetGroupSize = 16) {
-  const beginner = countsByLevel.beginner || 0;
-  const intermediate = countsByLevel.intermediate || 0;
-  const advanced = countsByLevel.advanced || 0;
+function planSmallCircleMerges(circles = []) {
+  const tierOf = (circle) => SKILL_TIERS.indexOf(circle.skillLevel);
+  const state = circles.map((c) => ({
+    ...c,
+    maleCount: c.maleCount || 0,
+    femaleCount: c.femaleCount || 0,
+    mergedInto: null,
+  }));
+  const moves = [];
+  const flagged = [];
 
-  const groupings = [];
+  const sources = state
+    .filter((c) => c.size >= 1 && c.size <= SMALL_CIRCLE_MAX_MEMBERS)
+    .sort((a, b) => a.size - b.size || tierOf(a) - tierOf(b));
 
-  // 1. Process exact same-level matches
-  let remBeginner = beginner;
-  let remIntermediate = intermediate;
-  let remAdvanced = advanced;
+  for (const source of sources) {
+    // It may have received other circles and is no longer small
+    if (source.size < 1 || source.size > SMALL_CIRCLE_MAX_MEMBERS) continue;
 
-  while (remBeginner >= targetGroupSize) {
-    groupings.push({ levels: ['beginner'], count: targetGroupSize, strategy: 'exact' });
-    remBeginner -= targetGroupSize;
-  }
-
-  while (remIntermediate >= targetGroupSize) {
-    groupings.push({ levels: ['intermediate'], count: targetGroupSize, strategy: 'exact' });
-    remIntermediate -= targetGroupSize;
-  }
-
-  while (remAdvanced >= targetGroupSize) {
-    groupings.push({ levels: ['advanced'], count: targetGroupSize, strategy: 'exact' });
-    remAdvanced -= targetGroupSize;
-  }
-
-  // 2. Process adjacent-level fallback combinations for remainders
-  // Check beginner + intermediate first
-  if (remBeginner > 0 && remIntermediate > 0 && remBeginner + remIntermediate >= targetGroupSize) {
-    const combinedCount = Math.min(remBeginner + remIntermediate, SOFT_MAX_GROUP);
-    groupings.push({
-      levels: ['beginner', 'intermediate'],
-      count: combinedCount,
-      strategy: 'adjacent_merged',
+    const candidates = state.filter((target) => {
+      if (target === source || target.mergedInto || target.size < 1) return false;
+      if (Math.abs(tierOf(target) - tierOf(source)) > 1) return false;
+      if (target.size > MERGE_RECEIVER_MAX_MEMBERS) return false;
+      if (target.size + source.size > SOFT_MAX_GROUP) return false;
+      if (!source.isAllWomen && !target.isAllWomen) {
+        if (target.maleCount + source.maleCount > GENDER_CAP) return false;
+        if (target.femaleCount + source.femaleCount > GENDER_CAP) return false;
+      }
+      return true;
     });
-    const fromBeginner = Math.min(remBeginner, combinedCount);
-    const fromIntermediate = combinedCount - fromBeginner;
-    remBeginner -= fromBeginner;
-    remIntermediate -= fromIntermediate;
-  }
 
-  // Check intermediate + advanced next
-  if (remIntermediate > 0 && remAdvanced > 0 && remIntermediate + remAdvanced >= targetGroupSize) {
-    const combinedCount = Math.min(remIntermediate + remAdvanced, SOFT_MAX_GROUP);
-    groupings.push({
-      levels: ['intermediate', 'advanced'],
-      count: combinedCount,
-      strategy: 'adjacent_merged',
+    if (candidates.length === 0) {
+      flagged.push(source.circleId);
+      continue;
+    }
+
+    candidates.sort((a, b) => {
+      const sameTierA = tierOf(a) === tierOf(source) ? 0 : 1;
+      const sameTierB = tierOf(b) === tierOf(source) ? 0 : 1;
+      return sameTierA - sameTierB || b.size - a.size || tierOf(a) - tierOf(b);
     });
-    const fromIntermediate = Math.min(remIntermediate, combinedCount);
-    const fromAdvanced = combinedCount - fromIntermediate;
-    remIntermediate -= fromIntermediate;
-    remAdvanced -= fromAdvanced;
+    const target = candidates[0];
+
+    moves.push({ from: source.circleId, to: target.circleId });
+    target.size += source.size;
+    target.maleCount += source.maleCount;
+    target.femaleCount += source.femaleCount;
+    source.size = 0;
+    source.maleCount = 0;
+    source.femaleCount = 0;
+    source.mergedInto = target.circleId;
   }
 
-  // 3. Mark remaining attendees as waiting in pool
-  if (remBeginner > 0) {
-    groupings.push({ levels: ['beginner'], count: remBeginner, strategy: 'waitlist' });
-  }
-  if (remIntermediate > 0) {
-    groupings.push({ levels: ['intermediate'], count: remIntermediate, strategy: 'waitlist' });
-  }
-  if (remAdvanced > 0) {
-    groupings.push({ levels: ['advanced'], count: remAdvanced, strategy: 'waitlist' });
-  }
-
-  return groupings;
+  return { moves, flagged };
 }
 
 /**
@@ -323,10 +331,47 @@ function isLiveRegistrationOpen(now = new Date()) {
 }
 
 /**
+ * Formats an IST {hour, minute} as '7:30 PM'.
+ *
+ * @param {{hour: number, minute: number}} time - Time of day.
+ * @returns {string} Human-readable time.
+ */
+function formatIstTime({ hour, minute }) {
+  const h12 = hour % 12 || 12;
+  return `${h12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+}
+
+/**
+ * Epoch milliseconds of a festival night's start (EVENT_START_TIME_IST on eventDate).
+ *
+ * @param {string} eventDateStr - Event date in 'YYYY-MM-DD' format.
+ * @returns {number} Start time in epoch ms (UTC).
+ */
+function getEventStartUtcMs(eventDateStr) {
+  const [year, month, day] = String(eventDateStr).trim().split('-').map(Number);
+  const istOffsetMs = 5.5 * 3600000;
+  return (
+    Date.UTC(year, month - 1, day, EVENT_START_TIME_IST.hour, EVENT_START_TIME_IST.minute, 0) -
+    istOffsetMs
+  );
+}
+
+/**
+ * Hours from `nowMs` until the event starts (negative once it has started).
+ *
+ * @param {string} eventDateStr - Event date in 'YYYY-MM-DD' format.
+ * @param {number} [nowMs=Date.now()] - Reference time.
+ * @returns {number} Hours remaining.
+ */
+function getHoursUntilEvent(eventDateStr, nowMs = Date.now()) {
+  return (getEventStartUtcMs(eventDateStr) - nowMs) / 3600000;
+}
+
+/**
  * Checks whether advance registration is open for a specific event date.
  *
- * Rule: Advance registration stays open anytime up until 2 hours before the specific event's 7:30 PM IST start
- * (i.e. cutoff is 5:30 PM IST on the event date).
+ * Rule: Advance registration stays open until 2 hours before the event's start
+ * (EVENT_START_TIME_IST, 7:30 PM IST by default, so the cutoff is 5:30 PM IST).
  *
  * @param {string} eventDateStr - Event date in 'YYYY-MM-DD' format.
  * @param {Date} [now=new Date()] - Reference timestamp.
@@ -341,18 +386,15 @@ function isAdvanceRegistrationOpen(eventDateStr, now = new Date()) {
     };
   }
 
-  // 7:30 PM IST = 19:30 IST. Cutoff 2 hours before = 17:30 IST (UTC 12:00)
-  const [year, month, day] = eventDateStr.trim().split('-').map(Number);
-  // Construct cutoff in UTC: 17:30 IST - 5:30 = 12:00 UTC
-  const cutoffUtcMs = Date.UTC(year, month - 1, day, 12, 0, 0);
+  const cutoffUtcMs = getEventStartUtcMs(eventDateStr) - 2 * 3600000;
   const cutoffDate = new Date(cutoffUtcMs);
 
-  const nowMs = now.getTime();
-
-  if (nowMs >= cutoffUtcMs) {
+  if (now.getTime() >= cutoffUtcMs) {
     return {
       isOpen: false,
-      reason: 'Advance registration for this event night closed 2 hours before the 7:30 PM IST start.',
+      reason: `Advance registration for this event night closed 2 hours before the ${formatIstTime(
+        EVENT_START_TIME_IST
+      )} IST start.`,
       cutoffIso: cutoffDate.toISOString(),
     };
   }
@@ -364,12 +406,16 @@ function isAdvanceRegistrationOpen(eventDateStr, now = new Date()) {
 }
 
 module.exports = {
+  getCirclePrefix,
   buildCircleId,
+  buildCircleName,
   getBucketKey,
   shouldStartNewBucket,
   checkGenderCap,
-  resolveSkillLevelGrouping,
+  planSmallCircleMerges,
   getIstTime,
   isLiveRegistrationOpen,
+  getEventStartUtcMs,
+  getHoursUntilEvent,
   isAdvanceRegistrationOpen,
 };

@@ -5,6 +5,7 @@ import GhostButton from '../components/common/GhostButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { apiPost } from '../api/apiClient';
+import { isMockOrder } from '../api/mockMode';
 
 /**
  * Dynamically injects the official Razorpay checkout script if not already loaded.
@@ -73,10 +74,17 @@ export function PaymentStep({
     }
     if (!order) return;
 
-    const scriptLoaded = await loadRazorpayScript();
-    if (!scriptLoaded) {
-      setError('Failed to load secure Razorpay gateway. Please check your internet connection.');
-      return;
+    // Demo orders (test contact details) pay through the fake checkout; real ones through Razorpay
+    let Checkout;
+    if (isMockOrder(order)) {
+      Checkout = (await import('../api/mockApi')).MockRazorpayCheckout;
+    } else {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setError('Failed to load secure Razorpay gateway. Please check your internet connection.');
+        return;
+      }
+      Checkout = window.Razorpay;
     }
 
     const options = {
@@ -106,7 +114,7 @@ export function PaymentStep({
     };
 
     try {
-      const rzp = new window.Razorpay(options);
+      const rzp = new Checkout(options);
       rzp.on('payment.failed', function (resp) {
         setError(`Payment Failed: ${resp.error?.description || 'Transaction declined.'}`);
       });
@@ -229,7 +237,7 @@ export function PaymentStep({
               }}
             >
               <span>Platform fee & matching</span>
-              <span style={{ color: theme.colors.liveGreen }}>FREE</span>
+              <span style={{ color: theme.colors.liveGreenText }}>FREE</span>
             </div>
 
             <div
@@ -248,7 +256,7 @@ export function PaymentStep({
                   fontFamily: theme.fonts.mono,
                   fontWeight: 700,
                   fontSize: '20px',
-                  color: theme.colors.amber,
+                  color: theme.colors.amberText,
                 }}
               >
                 ₹{orderData ? orderData.priceInRupees || orderData.amount / 100 : '...'}
@@ -268,7 +276,7 @@ export function PaymentStep({
               marginBottom: '18px',
             }}
           >
-            <span>🔒 Secured by Razorpay Live</span>
+            <span>🔒 Secured by Razorpay</span>
             <span>•</span>
             <span>UPI / Cards / NetBanking</span>
           </div>

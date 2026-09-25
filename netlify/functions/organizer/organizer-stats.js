@@ -3,13 +3,17 @@
  * @description Venue Organizer Operations & Analytics Dashboard API for SoloSaathi Circle.
  *
  * Implements:
- * - Session authentication check via verifyOrganizerToken or ADMIN_SECRET.
- * - Venue-scoped data aggregation.
+ * - Session authentication via the organizer token from admin-auth. The city and venue come from
+ *   the token, so an organizer only ever sees their own venue. Only a master admin session
+ *   (ALLOW_MASTER_ADMIN_LOGIN) may pass `city` / `venue` to look at another venue.
+ * - Venue-scoped data aggregation for one night (`eventDate`, defaults to today in IST), across
+ *   every circle created that night (groupstate.circleIds), plus advance pools not yet formed.
  * - AGGREGATE-ONLY metrics:
  *   - Total registrations with Live vs Advance split.
  *   - Skill-level distribution (Beginner, Intermediate, Advanced).
  *   - Gender distribution (Male, Female, Prefer not to say).
- *   - Circles formed, average circle size, and all-women circle count.
+ *   - Circles formed, average circle size, all-women circle count, and circles flagged for the
+ *     organizer (small advance circles the 12-hour merge could not place).
  *   - Venue gate show-up count and show-up rate percentage.
  *
  * CRITICAL PRIVACY & SECURITY REQUIREMENT:
@@ -20,10 +24,13 @@
  */
 
 const config = require('../../config/env');
+const { SKILL_TIERS } = require('../../shared/constants');
 const { successResponse, errorResponse, handleOptions } = require('../../shared/response');
 const { getIstTime } = require('../../shared/matching');
 const { verifyOrganizerToken } = require('./admin-auth');
 const db = require('../../shared/db');
+
+const GENDER_PREFS = ['mixed', 'allWomen'];
 
 /**
  * Netlify Function Handler: Returns aggregate operations data for venue organizers.
@@ -47,24 +54,22 @@ exports.handler = async (event, context) => {
     event.headers['Authorization'] ||
     event.headers['x-organizer-token'] ||
     '';
-
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const isMasterAdmin = token === config.ADMIN_SECRET;
 
-  let authenticatedVenueId = null;
-
-  if (!isMasterAdmin) {
-    const authResult = verifyOrganizerToken(token);
-    if (!authResult.valid) {
+  let session;
+  if (config.ALLOW_MASTER_ADMIN_LOGIN && token === config.ADMIN_SECRET) {
+    session = { isMaster: true, city: null, venue: null };
+  } else {
+    session = verifyOrganizerToken(token);
+    if (!session.valid) {
       return errorResponse(
-        authResult.error || 'Unauthorized: Valid organizer session token required.',
+        session.error || 'Unauthorized: Valid organizer session token required.',
         401
       );
     }
-    authenticatedVenueId = authResult.venueId;
   }
 
-  // 2. Resolve query parameters: city, venue, eventDate
+  // 2. Resolve query parameters
   let queryParams = {};
   if (event.httpMethod === 'GET') {
     queryParams = event.queryStringParameters || {};
@@ -78,81 +83,75 @@ exports.handler = async (event, context) => {
 
   const ist = getIstTime();
   const eventDate = String(queryParams.eventDate || ist.dateString).trim();
-  const venue = String(queryParams.venue || authenticatedVenueId || '').trim();
-  const city = String(queryParams.city || '').trim();
+  const city = String((session.isMaster && queryParams.city) || session.city || '').trim();
+  const venue = String((session.isMaster && queryParams.venue) || session.venue || '').trim();
 
-  if (!venue) {
-    return errorResponse("Missing required 'venue' identifier.", 400);
+  if (!city || !venue) {
+    return errorResponse(
+      'This organizer account has no venue assigned. Ask festival operations to set it up.',
+      400
+    );
   }
 
   try {
-    // 3. Fetch venue showups
-    const showupsList = (await db.getShowups(city, venue)) || [];
+    // 3. Venue showups for the night
+    const showupsList = (await db.getShowups(city, venue, eventDate)) || [];
     const totalShowups = showupsList.length;
 
-    // 4. Retrieve venue groups across partitions to aggregate metrics
-    const skillLevels = ['beginner', 'intermediate', 'advanced'];
-    const genderPrefs = ['mixed', 'allWomen'];
-
+    // 4. Every circle created that night, plus advance pools not yet formed
     let liveCount = 0;
     let advanceCount = 0;
-    let beginnerCount = 0;
-    let intermediateCount = 0;
-    let advancedCount = 0;
-    let maleCount = 0;
-    let femaleCount = 0;
-    let preferNotToSayCount = 0;
+    const skillCounts = { beginner: 0, intermediate: 0, advanced: 0 };
+    const genderCounts = { male: 0, female: 0, prefer_not_to_say: 0 };
     let allWomenCirclesCount = 0;
+    let needsAttentionCount = 0;
 
-    const recordedCircleIds = new Set();
+    const countPerson = (person) => {
+      const level = SKILL_TIERS.includes(person.skillLevel) ? person.skillLevel : 'intermediate';
+      skillCounts[level] += 1;
+      if (person.gender === 'male') genderCounts.male += 1;
+      else if (person.gender === 'female') genderCounts.female += 1;
+      else genderCounts.prefer_not_to_say += 1;
+    };
+
+    const seenCircleIds = new Set();
     const circlesList = [];
 
-    for (const lvl of skillLevels) {
-      for (const pref of genderPrefs) {
-        // Live state aggregation
-        const groupState = await db.getGroupState(city, venue, lvl, pref, eventDate);
-        if (groupState && groupState.activeCircleId) {
-          if (!recordedCircleIds.has(groupState.activeCircleId)) {
-            recordedCircleIds.add(groupState.activeCircleId);
-            const cState = await db.getCircleState(groupState.activeCircleId);
-            if (cState) {
-              circlesList.push(cState);
-              if (cState.isAllWomen) allWomenCirclesCount += 1;
+    for (const level of SKILL_TIERS) {
+      for (const pref of GENDER_PREFS) {
+        const groupState = await db.getGroupState(city, venue, level, pref, eventDate);
+        const circleIds =
+          groupState?.circleIds || (groupState?.activeCircleId ? [groupState.activeCircleId] : []);
 
-              for (const m of cState.members || []) {
-                liveCount += 1;
-                if (m.skillLevel === 'beginner') beginnerCount += 1;
-                else if (m.skillLevel === 'advanced') advancedCount += 1;
-                else intermediateCount += 1;
+        for (const circleId of circleIds) {
+          if (seenCircleIds.has(circleId)) continue;
+          seenCircleIds.add(circleId);
 
-                if (m.gender === 'male') maleCount += 1;
-                else if (m.gender === 'female') femaleCount += 1;
-                else preferNotToSayCount += 1;
-              }
-            }
+          const circle = await db.getCircleState(circleId);
+          if (!circle || circle.status === 'merged') continue; // merged members are counted in the receiver
+          circlesList.push(circle);
+          if (circle.isAllWomen) allWomenCirclesCount += 1;
+          if (circle.needsOrganizerAttention) needsAttentionCount += 1;
+
+          for (const member of circle.members || []) {
+            if (circle.origin === 'advance') advanceCount += 1;
+            else liveCount += 1;
+            countPerson(member);
           }
         }
 
-        // Advance pending pool aggregation
-        const pendingPool = await db.getPendingPool(city, venue, lvl, pref, eventDate);
-        if (Array.isArray(pendingPool)) {
-          for (const m of pendingPool) {
-            advanceCount += 1;
-            if (m.skillLevel === 'beginner') beginnerCount += 1;
-            else if (m.skillLevel === 'advanced') advancedCount += 1;
-            else intermediateCount += 1;
-
-            if (m.gender === 'male') maleCount += 1;
-            else if (m.gender === 'female') femaleCount += 1;
-            else preferNotToSayCount += 1;
-          }
+        const pendingPool = await db.getPendingPool(city, venue, level, pref, eventDate);
+        for (const person of Array.isArray(pendingPool) ? pendingPool : []) {
+          advanceCount += 1;
+          countPerson(person);
         }
       }
     }
 
     const totalRegistrations = liveCount + advanceCount;
-    const totalCircles = circlesList.length;
-    const totalCircleMembers = circlesList.reduce((acc, c) => acc + (c.totalCount || 0), 0);
+    const circlesWithMembers = circlesList.filter((c) => (c.members || []).length > 0);
+    const totalCircles = circlesWithMembers.length;
+    const totalCircleMembers = circlesWithMembers.reduce((acc, c) => acc + (c.members || []).length, 0);
     const averageCircleSize =
       totalCircles > 0 ? Number((totalCircleMembers / totalCircles).toFixed(1)) : 0;
 
@@ -163,32 +162,25 @@ exports.handler = async (event, context) => {
 
     // 5. STRICT SERVER-SIDE WHITELIST: Exclude money, names, and phone numbers
     const aggregateDashboardPayload = {
-      venue: venue,
-      city: city || null,
-      eventDate: eventDate,
+      venue,
+      city,
+      eventDate,
       registrations: {
         total: totalRegistrations,
         live: liveCount,
         advance: advanceCount,
       },
-      skillLevelBreakdown: {
-        beginner: beginnerCount,
-        intermediate: intermediateCount,
-        advanced: advancedCount,
-      },
-      genderBalance: {
-        male: maleCount,
-        female: femaleCount,
-        prefer_not_to_say: preferNotToSayCount,
-      },
+      skillLevelBreakdown: skillCounts,
+      genderBalance: genderCounts,
       circles: {
         totalFormed: totalCircles,
         averageSize: averageCircleSize,
         allWomenCircleCount: allWomenCirclesCount,
+        needsAttention: needsAttentionCount,
       },
       attendance: {
-        totalShowups: totalShowups,
-        showUpRatePercentage: showUpRatePercentage,
+        totalShowups,
+        showUpRatePercentage,
       },
       dataFreshnessTimestamp: Date.now(),
     };

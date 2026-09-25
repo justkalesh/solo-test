@@ -132,7 +132,7 @@ export default function NotFoundPage() {
             style={{
               background: 'none',
               border: 'none',
-              color: theme.colors.gold,
+              color: theme.colors.goldText,
               fontSize: '13px',
               fontFamily: theme.fonts.body,
               fontWeight: 500,

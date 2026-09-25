@@ -7,8 +7,51 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
  * - Active registrant / attendee profile
  * - Selected festival venue & city
  * - Unread notification alerts
- * - Active circle assignment
+ * - Active circle assignment (persisted, so the circle page survives a reload; CircleActivePage
+ *   refreshes it from get-circle)
  */
+
+const ACTIVE_CIRCLE_KEY = 'solosaathi_active_circle';
+
+// Festival alerts: the Alerts page and the nav badges both read this list.
+// `tone` picks the theme accent (gold, cyan, pink, liveGreen).
+const DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'welcome-1',
+    title: 'Welcome to SoloSaathi Circle! 💃',
+    message: 'Doors open tonight at 6:30 PM. Complete your registration to meet your circle!',
+    time: 'Today',
+    tag: 'Welcome',
+    tone: 'gold',
+    read: false,
+    actionLink: '/register',
+    actionLabel: 'Register Walk-Up',
+  },
+  {
+    id: 'meeting-point',
+    title: '📍 Find your circle at the ground',
+    message:
+      'Open your circle to see its meeting point, then turn on the color beacon so your circle can spot you.',
+    time: 'Tonight',
+    tag: 'Circle Tip',
+    tone: 'liveGreen',
+    read: true,
+    actionLink: '/find-circle',
+    actionLabel: 'Open My Circle',
+  },
+  {
+    id: 'advance-info',
+    title: '🎟️ How advance bookings work',
+    message:
+      'Advance circles are formed 48 hours before the event night, and very small circles are combined with a neighbouring level on the morning of the event.',
+    time: 'Advance',
+    tag: 'Booking',
+    tone: 'cyan',
+    read: true,
+    actionLink: '/find-circle',
+    actionLabel: 'My Passes',
+  },
+];
 
 const AppContext = createContext(null);
 
@@ -24,16 +67,15 @@ export function AppProvider({ children }) {
 
   const [selectedCity, setSelectedCity] = useState('Ahmedabad');
   const [selectedVenue, setSelectedVenue] = useState('United Way Garba Grounds');
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'welcome-1',
-      title: 'Welcome to SoloSaathi Circle! 💃',
-      message: 'Doors open tonight at 6:30 PM. Complete your registration to meet your circle!',
-      timestamp: new Date().toISOString(),
-      read: false,
-    },
-  ]);
-  const [activeCircle, setActiveCircle] = useState(null);
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+  const [activeCircle, setActiveCircle] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ACTIVE_CIRCLE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Sync user changes to localStorage
   useEffect(() => {
@@ -48,10 +90,26 @@ export function AppProvider({ children }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    try {
+      if (activeCircle) {
+        localStorage.setItem(ACTIVE_CIRCLE_KEY, JSON.stringify(activeCircle));
+      } else {
+        localStorage.removeItem(ACTIVE_CIRCLE_KEY);
+      }
+    } catch {
+      // LocalStorage access may fail in private mode
+    }
+  }, [activeCircle]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const dismissNotification = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const addNotification = (item) => {
@@ -84,6 +142,7 @@ export function AppProvider({ children }) {
     setNotifications,
     unreadCount,
     markAllNotificationsRead,
+    dismissNotification,
     addNotification,
     activeCircle,
     setActiveCircle,

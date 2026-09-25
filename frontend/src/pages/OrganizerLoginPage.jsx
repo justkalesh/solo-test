@@ -127,7 +127,7 @@ export default function OrganizerLoginPage() {
               <Link
                 to="/venues"
                 style={{
-                  color: theme.colors.gold,
+                  color: theme.colors.goldText,
                   textDecoration: 'none',
                   display: 'inline-block',
                   padding: '10px 0',

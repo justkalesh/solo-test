@@ -1,4 +1,79 @@
 import { API_BASE_URL } from './config';
+import { normalizePhone, readTokenPayload, shouldUseMock } from './mockMode';
+
+// ---------------------------------------------------------------------------
+// Attendee sessions: verify-otp returns a signed token that find-my-circle, circle-actions and
+// get-circle require. Tokens are kept per phone number in localStorage (12-hour expiry) and
+// attached automatically.
+// ---------------------------------------------------------------------------
+const SESSION_STORAGE_KEY = 'solosaathi_attendee_sessions';
+const CURRENT_SESSION_KEY = 'solosaathi_attendee_phone';
+const SESSION_ENDPOINTS = new Set(['find-my-circle', 'circle-actions', 'get-circle']);
+
+function readSessions() {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSessions(sessions) {
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  } catch {
+    // Storage blocked: the session lasts until the page is closed
+  }
+}
+
+function saveAttendeeSession(phone, token) {
+  const key = normalizePhone(phone);
+  if (!key || !token) return;
+  writeSessions({ ...readSessions(), [key]: token });
+  try {
+    localStorage.setItem(CURRENT_SESSION_KEY, key);
+  } catch {
+    // ignore
+  }
+}
+
+/** Forgets the stored session for a number (or the current one). */
+export function clearAttendeeSession(phone) {
+  const key = phone ? normalizePhone(phone) : getCurrentSessionPhone();
+  if (!key) return;
+  const sessions = readSessions();
+  delete sessions[key];
+  writeSessions(sessions);
+}
+
+/** The number verified most recently in this browser, or null. */
+export function getCurrentSessionPhone() {
+  try {
+    return localStorage.getItem(CURRENT_SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The unexpired session token for a number (defaults to the most recently verified number).
+ *
+ * @param {string} [phone]
+ * @returns {string|null}
+ */
+export function getAttendeeSession(phone) {
+  const key = phone ? normalizePhone(phone) : getCurrentSessionPhone();
+  const token = key ? readSessions()[key] : null;
+  if (!token) return null;
+  const payload = readTokenPayload(token);
+  if (!payload || !payload.exp || Date.now() > payload.exp) {
+    clearAttendeeSession(key);
+    return null;
+  }
+  return token;
+}
+
+export const hasAttendeeSession = (phone) => Boolean(getAttendeeSession(phone));
 
 /**
  * Custom Error class representing an API or Serverless Function failure.
@@ -19,8 +94,12 @@ export class ApiError extends Error {
  * - Success: `{ success: true, data: ... }` => resolves with `data`
  * - Error:   `{ success: false, error: "...", details: ... }` => throws `ApiError`
  *
+ * Test contact details are answered by the in-browser demo backend (see ./mockMode.js).
+ *
  * @param {string} endpointPath - Function route path, e.g. '/auth/send-otp' or 'auth/send-otp'
- * @param {Object} [options] - Fetch options (method, body, headers, etc.)
+ * @param {Object} [options] - Fetch options (method, body, headers, etc.). `sessionPhone` picks
+ *   which verified number's session to send; it defaults to the request's `whatsapp`, then the
+ *   most recently verified number.
  * @returns {Promise<*>} - Resolves with the `data` payload from the backend response.
  */
 export async function apiRequest(endpointPath, options = {}) {
@@ -49,15 +128,27 @@ export async function apiRequest(endpointPath, options = {}) {
     }
   }
 
+  const functionName = url.split('?')[0].split('/').filter(Boolean).pop();
+  const requestBody =
+    options.body && typeof options.body === 'object' && !(options.body instanceof FormData)
+      ? options.body
+      : {};
+
+  const { sessionPhone, ...fetchOptions } = options;
   const headers = {
     'Content-Type': 'application/json',
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
   };
+  if (SESSION_ENDPOINTS.has(functionName) && !headers.Authorization && !headers.authorization) {
+    const preferredPhone = sessionPhone || requestBody.whatsapp || options.params?.whatsapp;
+    const token = (preferredPhone && getAttendeeSession(preferredPhone)) || getAttendeeSession();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
 
   const config = {
-    method: options.method || 'GET',
+    method: fetchOptions.method || 'GET',
+    ...fetchOptions,
     headers,
-    ...options,
   };
 
   if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
@@ -66,7 +157,10 @@ export async function apiRequest(endpointPath, options = {}) {
 
   let response;
   try {
-    response = await fetch(url, config);
+    const useMock = shouldUseMock(functionName, requestBody, options.params || {}, headers);
+    response = useMock
+      ? await (await import('./mockApi')).mockFetch(url, config)
+      : await fetch(url, config);
   } catch (networkError) {
     throw new ApiError(
       'Unable to connect to SoloSaathi servers. Please check your network connection.',
@@ -91,8 +185,15 @@ export async function apiRequest(endpointPath, options = {}) {
   // If backend formatted via netlify/shared/response.js:
   if (responseData && typeof responseData === 'object' && 'success' in responseData) {
     if (responseData.success === true) {
-      return responseData.data !== undefined ? responseData.data : responseData;
+      const data = responseData.data !== undefined ? responseData.data : responseData;
+      if (functionName === 'verify-otp' && data && data.sessionToken) {
+        saveAttendeeSession(data.whatsapp || requestBody.whatsapp, data.sessionToken);
+      }
+      return data;
     } else {
+      if (response.status === 401 && responseData.details?.sessionRequired) {
+        clearAttendeeSession(sessionPhone || requestBody.whatsapp);
+      }
       throw new ApiError(
         responseData.error || 'A server error occurred. Please try again.',
         response.status,
@@ -134,6 +235,9 @@ export const postRequest = (path, body, options = {}) =>
 
 export default {
   apiRequest,
+  getAttendeeSession,
+  hasAttendeeSession,
+  clearAttendeeSession,
   apiGet,
   apiPost,
   apiPut,

@@ -6,7 +6,7 @@
  * - Request validation via validateOtpSendPayload.
  * - Rate limiting: OTP_RESEND_COOLDOWN_SECONDS (30s) between successive sends.
  * - Window capping: OTP_MAX_SENDS_PER_WINDOW (3) per OTP_SEND_WINDOW_MINUTES (15m).
- * - Hard-block check: Rejects numbers locked due to excessive failed verification attempts.
+ * - Lockout: after OTP_MAX_VERIFY_ATTEMPTS wrong codes, no new OTP for OTP_LOCKOUT_MINUTES (15m).
  * - Generation: Cryptographically secure 6-digit numeric code with OTP_EXPIRY_MINUTES (10m) TTL.
  * - Channel routing: Primary dispatch via WhatsApp Business API, automatic fallback to SMS.
  */
@@ -18,6 +18,7 @@ const {
   OTP_RESEND_COOLDOWN_SECONDS,
   OTP_MAX_SENDS_PER_WINDOW,
   OTP_SEND_WINDOW_MINUTES,
+  OTP_LOCKOUT_MINUTES,
 } = require('../../shared/constants');
 const { successResponse, errorResponse, handleOptions } = require('../../shared/response');
 const { validateOtpSendPayload } = require('../../shared/validators');
@@ -71,14 +72,18 @@ exports.handler = async (event, context) => {
   const now = Date.now();
 
   try {
-    // 2. Check if this phone number is hard-blocked from previous brute-force attempts
+    // 2. Temporary lockout after too many wrong codes (brute-force protection)
     const existingOtpRecord = await db.getOtpRecord(phone);
     if (existingOtpRecord && existingOtpRecord.isBlocked) {
-      return errorResponse(
-        'This mobile number is permanently locked due to excessive failed OTP attempts. Manual override is not permitted to protect festival attendees from ticket fraud.',
-        403,
-        { hardBlocked: true }
-      );
+      const lockoutEndsAt = (existingOtpRecord.blockedAt || 0) + OTP_LOCKOUT_MINUTES * 60 * 1000;
+      if (now < lockoutEndsAt) {
+        const minutesLeft = Math.ceil((lockoutEndsAt - now) / 60000);
+        return errorResponse(
+          `Too many wrong codes. For your security, please try again in ${minutesLeft} minute(s).`,
+          429,
+          { hardBlocked: true, lockoutMinutesRemaining: minutesLeft }
+        );
+      }
     }
 
     // 3. Rate-limiting check

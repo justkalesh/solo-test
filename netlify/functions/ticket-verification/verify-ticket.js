@@ -153,7 +153,7 @@ async function extractTicketInfo(base64Image) {
 
   // Initialize Google Generative AI client
   const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: config.GEMINI_MODEL });
 
   const prompt =
     'You are an expert OCR ticket inspector for Navratri/Garba festivals in India. ' +

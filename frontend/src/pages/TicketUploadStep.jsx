@@ -265,7 +265,7 @@ export function TicketUploadStep({
                     style={{
                       fontSize: '13px',
                       fontWeight: 600,
-                      color: theme.colors.liveGreen,
+                      color: theme.colors.liveGreenText,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
@@ -303,7 +303,7 @@ export function TicketUploadStep({
                 borderRadius: '10px',
                 background: 'rgba(255, 176, 32, 0.12)',
                 border: '0.5px solid rgba(255, 176, 32, 0.4)',
-                color: theme.colors.amber,
+                color: theme.colors.amberText,
                 fontSize: '12px',
                 lineHeight: 1.45,
               }}

@@ -30,6 +30,29 @@ const LIVE_DAILY_WINDOW = Object.freeze({
   endMinute: 30,
 });
 
+// Festival night start time in IST. Advance booking closes 2 hours before it, advance pools
+// become circles ADVANCE_FINALIZE_HOURS_BEFORE_EVENT before it, and small circles merge
+// MERGE_HOURS_BEFORE_EVENT before it. Change this one value if the start time changes.
+const EVENT_START_TIME_IST = Object.freeze({
+  hour: 19,
+  minute: 30,
+});
+
+// Advance pools turn into circles this many hours before the event starts...
+const ADVANCE_FINALIZE_HOURS_BEFORE_EVENT = 48;
+
+// ...or earlier, as soon as a pool reaches this size.
+const ADVANCE_EARLY_FINALIZE_POOL_SIZE = 12;
+
+// Small advance circles (1 to SMALL_CIRCLE_MAX_MEMBERS people) merge into a circle of the same or a
+// neighbouring skill tier that has at most MERGE_RECEIVER_MAX_MEMBERS people, this long before the start.
+const MERGE_HOURS_BEFORE_EVENT = 12;
+const SMALL_CIRCLE_MAX_MEMBERS = 3;
+const MERGE_RECEIVER_MAX_MEMBERS = 10;
+
+// Skill tiers in order; merges only move between neighbours (never beginner <-> advanced).
+const SKILL_TIERS = Object.freeze(['beginner', 'intermediate', 'advanced']);
+
 // Nightly automated shutdown time in IST (1:00 AM) for ephemeral circle group chats.
 const CHAT_AUTO_CLOSE_TIME = Object.freeze({
   hour: 1,
@@ -95,6 +118,15 @@ const GROW_MIN_SPOTS = 1;
 // Maximum attendee capacity threshold allowed when expanding an active circle.
 const GROW_MAX_SPOTS = 20;
 
+// After OTP_MAX_VERIFY_ATTEMPTS wrong codes, the number can't request a new OTP for this long.
+const OTP_LOCKOUT_MINUTES = 15;
+
+// Lifetime of the signed attendee session issued after OTP verification (covers a festival night).
+const ATTENDEE_SESSION_TTL_HOURS = 12;
+
+// Lifetime of an organizer dashboard session.
+const ORGANIZER_SESSION_TTL_HOURS = 12;
+
 // Exact wording must NOT be altered anywhere it's used — brand and sentiment verified for festival closing.
 const CHAT_CLOSE_MESSAGE =
   "That's a wrap, Saathi! Raas over, circle closed — feet tired, heart fuller. Same ground, same magic, tomorrow?";
@@ -106,6 +138,13 @@ module.exports = {
   SOFT_MAX_GROUP,
   LIVE_SEASON_START_DATE,
   LIVE_DAILY_WINDOW,
+  EVENT_START_TIME_IST,
+  ADVANCE_FINALIZE_HOURS_BEFORE_EVENT,
+  ADVANCE_EARLY_FINALIZE_POOL_SIZE,
+  MERGE_HOURS_BEFORE_EVENT,
+  SMALL_CIRCLE_MAX_MEMBERS,
+  MERGE_RECEIVER_MAX_MEMBERS,
+  SKILL_TIERS,
   CHAT_AUTO_CLOSE_TIME,
   OTP_CODE_LENGTH,
   OTP_EXPIRY_MINUTES,
@@ -122,5 +161,8 @@ module.exports = {
   PRICING,
   GROW_MIN_SPOTS,
   GROW_MAX_SPOTS,
+  OTP_LOCKOUT_MINUTES,
+  ATTENDEE_SESSION_TTL_HOURS,
+  ORGANIZER_SESSION_TTL_HOURS,
   CHAT_CLOSE_MESSAGE,
 };

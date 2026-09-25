@@ -7,7 +7,8 @@ import GhostButton from '../components/common/GhostButton';
 import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
-import { postRequest } from '../api/apiClient';
+import OtpVerificationModal from './OtpVerificationModal';
+import { postRequest, hasAttendeeSession } from '../api/apiClient';
 
 /**
  * Normalizes input string to 10 digits
@@ -27,11 +28,13 @@ export default function FindMyCirclePage() {
   const [error, setError] = useState(null);
   const [resultData, setResultData] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  // Bookings are private: the number is verified with OTP first (the session lasts 12 hours)
+  const [otpPhone, setOtpPhone] = useState(null);
 
-  // Auto-search if phone was already stored in session
+  // Auto-search if this browser already verified the stored number
   useEffect(() => {
     const saved = sessionStorage.getItem('user_mobile');
-    if (saved && normalizePhone(saved).length === 10 && !hasSearched) {
+    if (saved && normalizePhone(saved).length === 10 && hasAttendeeSession(saved) && !hasSearched) {
       handleLookup(saved);
     }
   }, []);
@@ -40,6 +43,11 @@ export default function FindMyCirclePage() {
     const cleanPhone = normalizePhone(phoneToUse || phone);
     if (!cleanPhone || cleanPhone.length !== 10) {
       setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (!hasAttendeeSession(cleanPhone)) {
+      setError(null);
+      setOtpPhone(cleanPhone);
       return;
     }
 
@@ -52,7 +60,11 @@ export default function FindMyCirclePage() {
       setResultData(data);
       sessionStorage.setItem('user_mobile', cleanPhone);
     } catch (err) {
-      setError(err.message || 'Failed to find registrations for this mobile number.');
+      if (err.details?.sessionRequired) {
+        setOtpPhone(cleanPhone);
+      } else {
+        setError(err.message || 'Failed to find registrations for this mobile number.');
+      }
       setResultData(null);
     } finally {
       setLoading(false);
@@ -85,7 +97,8 @@ export default function FindMyCirclePage() {
           Find My Circle & Pass
         </h1>
         <p style={{ fontSize: '13px', color: theme.colors.textMuted, lineHeight: 1.5, maxWidth: '380px', margin: '0 auto' }}>
-          Enter your registered WhatsApp number to retrieve your Navratri Circle, Beacon, and Digital Entry Pass.
+          Enter your registered WhatsApp number to retrieve your Navratri Circle, Beacon, and Digital
+          Entry Pass. We'll send a code to confirm it's you.
         </p>
       </div>
 
@@ -222,7 +235,7 @@ export default function FindMyCirclePage() {
                     padding: '20px',
                     position: 'relative',
                     borderLeft: `4px solid ${
-                      isLive ? '#10B981' : isUpcoming ? theme.colors.cyan : '#6B7280'
+                      isLive ? theme.colors.liveGreen : isUpcoming ? theme.colors.cyan : theme.colors.borderDefault
                     }`,
                   }}
                 >
@@ -262,8 +275,8 @@ export default function FindMyCirclePage() {
                       <span
                         style={{
                           background: 'rgba(16,185,129,0.15)',
-                          border: '1px solid #10B981',
-                          color: '#34D399',
+                          border: `1px solid ${theme.colors.liveGreen}`,
+                          color: theme.colors.liveGreenText,
                           padding: '4px 10px',
                           borderRadius: '16px',
                           fontSize: '11px',
@@ -278,7 +291,7 @@ export default function FindMyCirclePage() {
                             width: '6px',
                             height: '6px',
                             borderRadius: '50%',
-                            background: '#10B981',
+                            background: theme.colors.liveGreen,
                           }}
                         />
                         LIVE TONIGHT
@@ -290,7 +303,7 @@ export default function FindMyCirclePage() {
                         style={{
                           background: 'rgba(0,194,209,0.12)',
                           border: `1px solid ${theme.colors.cyan}`,
-                          color: theme.colors.cyan,
+                          color: theme.colors.cyanText,
                           padding: '4px 10px',
                           borderRadius: '16px',
                           fontSize: '11px',
@@ -305,8 +318,8 @@ export default function FindMyCirclePage() {
                       <span
                         style={{
                           background: 'rgba(107,114,128,0.15)',
-                          border: '1px solid #6B7280',
-                          color: '#9CA3AF',
+                          border: `1px solid ${theme.colors.borderDefault}`,
+                          color: theme.colors.textMuted,
                           padding: '4px 10px',
                           borderRadius: '16px',
                           fontSize: '11px',
@@ -349,10 +362,10 @@ export default function FindMyCirclePage() {
                       <span>👤 {reg.name}</span>
                       <span>⚡ Skill: {reg.skillLevel}</span>
                       {reg.isAllWomen && (
-                        <span style={{ color: theme.colors.gold }}>🌸 All-Women</span>
+                        <span style={{ color: theme.colors.goldText }}>🌸 All-Women</span>
                       )}
                       {reg.isCaptain && (
-                        <span style={{ color: theme.colors.gold }}>👑 Captain</span>
+                        <span style={{ color: theme.colors.goldText }}>👑 Captain</span>
                       )}
                     </div>
                   </div>
@@ -374,7 +387,7 @@ export default function FindMyCirclePage() {
                         style={{
                           fontSize: '13px',
                           fontWeight: 600,
-                          color: isLive ? theme.colors.gold : theme.colors.textSecondary,
+                          color: isLive ? theme.colors.goldText : theme.colors.textSecondary,
                           marginBottom: '2px',
                         }}
                       >
@@ -424,8 +437,8 @@ export default function FindMyCirclePage() {
                     <div
                       style={{
                         fontSize: '10px',
-                        color: isPast ? '#9CA3AF' : '#10B981',
-                        border: `1px solid ${isPast ? '#6B7280' : '#10B981'}`,
+                        color: isPast ? theme.colors.textMuted : theme.colors.liveGreenText,
+                        border: `1px solid ${isPast ? theme.colors.borderDefault : theme.colors.liveGreen}`,
                         borderRadius: '4px',
                         padding: '2px 6px',
                         flexShrink: 0,
@@ -437,8 +450,8 @@ export default function FindMyCirclePage() {
 
                   {/* Action Buttons based on Access Tier */}
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {/* STATE 1: LIVE TONIGHT -> Full active buttons */}
-                    {isLive && (
+                    {/* STATE 1: LIVE TONIGHT -> Beacon (group chat is hidden for launch) */}
+                    {isLive && reg.circleId && (
                       <>
                         <Link
                           to={`/circle/${reg.circleId}`}
@@ -451,25 +464,6 @@ export default function FindMyCirclePage() {
                           >
                             🪩 Open Color Beacon
                           </PrimaryButton>
-                        </Link>
-                        <Link
-                          to={`/chat/${reg.circleId}`}
-                          state={{ circle: { id: reg.circleId, name: reg.circleName, meetingPoint: reg.meetingPoint }, registrationId: reg.registrationId, userName: reg.name }}
-                          style={{ textDecoration: 'none', flex: 1 }}
-                        >
-                          <GhostButton
-                            id={`btn-open-chat-${reg.registrationId}`}
-                            style={{
-                              width: '100%',
-                              padding: '9px 12px',
-                              minHeight: '44px',
-                              fontSize: '13px',
-                              borderColor: theme.colors.gold,
-                              color: theme.colors.gold,
-                            }}
-                          >
-                            💬 Group Chat
-                          </GhostButton>
                         </Link>
                       </>
                     )}
@@ -484,10 +478,10 @@ export default function FindMyCirclePage() {
                           background: 'rgba(0,194,209,0.05)',
                           borderRadius: '6px',
                           fontSize: '12px',
-                          color: theme.colors.cyan,
+                          color: theme.colors.cyanText,
                         }}
                       >
-                        ⏳ Circle assignment & Beacon unlock at 6:30 PM on {reg.eventDate}
+                        ⏳ Beacon unlocks at 6:30 PM on {reg.eventDate}
                       </div>
                     )}
 
@@ -504,7 +498,7 @@ export default function FindMyCirclePage() {
                           color: theme.colors.textMuted,
                         }}
                       >
-                        🔒 Festival night completed. Group Beacon & Chat archived.
+                        🔒 Festival night completed. Beacon archived.
                       </div>
                     )}
                   </div>
@@ -514,6 +508,17 @@ export default function FindMyCirclePage() {
           </div>
         </div>
       )}
+
+      <OtpVerificationModal
+        isOpen={Boolean(otpPhone)}
+        initialPhone={otpPhone || ''}
+        onClose={() => setOtpPhone(null)}
+        onVerified={({ whatsapp: verifiedPhone }) => {
+          setOtpPhone(null);
+          setPhone(verifiedPhone);
+          handleLookup(verifiedPhone);
+        }}
+      />
     </div>
   );
 }

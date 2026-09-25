@@ -145,7 +145,7 @@ export function NavBar() {
                 active={location.pathname === '/organizer'}
                 style={{
                   borderColor: `${theme.colors.amber}55`,
-                  color: theme.colors.amber,
+                  color: theme.colors.amberText,
                   padding: '8px 14px',
                   fontSize: '12.5px',
                 }}

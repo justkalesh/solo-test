@@ -5,8 +5,10 @@
  * Enforces uniform response schemas across all serverless API endpoints:
  * - Success payloads: `{ success: true, data: ... }`
  * - Error payloads: `{ success: false, error: "message", details: ... }`
- * Includes open CORS headers required for web and mobile client access.
+ * CORS allows config.ALLOWED_ORIGIN (set it to the production site URL; '*' only for local dev).
  */
+
+const config = require('../config/env');
 
 /**
  * Creates a standardized HTTP 2xx success response for Netlify Functions.
@@ -20,7 +22,7 @@ function successResponse(data, statusCode = 200) {
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': config.ALLOWED_ORIGIN,
     },
     body: JSON.stringify({
       success: true,
@@ -42,7 +44,7 @@ function errorResponse(message, statusCode = 400, details = null) {
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': config.ALLOWED_ORIGIN,
     },
     body: JSON.stringify({
       success: false,
@@ -61,7 +63,7 @@ function handleOptions() {
   return {
     statusCode: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': config.ALLOWED_ORIGIN,
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Max-Age': '86400',

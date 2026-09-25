@@ -10,12 +10,13 @@
  *   in debug and failure logs.
  */
 
+const { shouldStartNewBucket, checkGenderCap } = require('./matching');
 const {
-  buildCircleId,
-  shouldStartNewBucket,
-  checkGenderCap,
-} = require('./matching');
-const { SOFT_MAX_GROUP } = require('./constants');
+  createCircleState,
+  toCircleMember,
+  adjustGenderCount,
+  circleSummary,
+} = require('./circles');
 const db = require('./db');
 
 /**
@@ -58,7 +59,7 @@ async function joinMatchingBucket(registration) {
   // 1. LIVE REGISTRATION MATCHING
   // -------------------------------------------------------------------------
   if (registrationType === 'live') {
-    // Idempotency: If circle is already assigned, fetch and return current state (runs BEFORE transaction)
+    // Fast idempotency path (duplicate webhook / verify-payment call)
     if (registration.circleId) {
       const existingCircle = await db.getCircleState(registration.circleId);
       if (existingCircle) {
@@ -66,31 +67,17 @@ async function joinMatchingBucket(registration) {
           success: true,
           type: 'live',
           circleId: registration.circleId,
-          circle: {
-            id: existingCircle.circleId,
-            circleId: existingCircle.circleId,
-            name: existingCircle.name,
-            meetingPoint: existingCircle.meetingPoint,
-            chatLink: existingCircle.chatLink,
-            isCaptain: existingCircle.captainId === registration.id,
-            totalMembers: existingCircle.totalCount || (existingCircle.members ? existingCircle.members.length : 0),
-            skillLevel: existingCircle.skillLevel || level,
-            city: existingCircle.city || city,
-            venue: existingCircle.venue || venue,
-            captainId: existingCircle.captainId || null,
-            captainName: existingCircle.captainName || null,
-            maxSpots: SOFT_MAX_GROUP,
-            members: existingCircle.members || [],
-          },
+          circle: circleSummary(existingCircle, registration.id),
           alreadyJoined: true,
         };
       }
     }
 
-    // Wrap the entire live matching read-evaluate-write sequence in a single Firestore transaction
     return await db.runTransaction(async (transaction) => {
-      const groupStateDocId = db.getGroupStateDocId(city, venue, level, genderPref, eventDate);
-      const groupStateRef = db.getDocRef('groupstate', groupStateDocId);
+      const groupStateRef = db.getDocRef(
+        'groupstate',
+        db.getGroupStateDocId(city, venue, level, genderPref, eventDate)
+      );
       const groupStateDoc = await transaction.get(groupStateRef);
       const groupState = groupStateDoc.exists ? groupStateDoc.data() : null;
 
@@ -105,173 +92,102 @@ async function joinMatchingBucket(registration) {
         circleState = circleDoc.exists ? circleDoc.data() : null;
       }
 
-      // Also read registration in transaction to verify idempotency atomically
+      // Re-check inside the transaction: a concurrent call may have assigned this attendee already
       const regRef = db.getDocRef('registrations', registration.id);
       const regDoc = await transaction.get(regRef);
       if (regDoc.exists && regDoc.data().circleId) {
         const assignedCircleId = regDoc.data().circleId;
-        const assignedCircleRef = db.getDocRef('circles', assignedCircleId);
-        const assignedCircleDoc = await transaction.get(assignedCircleRef);
+        const assignedCircleDoc = await transaction.get(db.getDocRef('circles', assignedCircleId));
         if (assignedCircleDoc.exists) {
-          const assigned = assignedCircleDoc.data();
           return {
             success: true,
             type: 'live',
             circleId: assignedCircleId,
-            circle: {
-              id: assigned.circleId,
-              circleId: assigned.circleId,
-              name: assigned.name,
-              meetingPoint: assigned.meetingPoint,
-              chatLink: assigned.chatLink,
-              isCaptain: assigned.captainId === registration.id,
-              totalMembers: assigned.totalCount || (assigned.members ? assigned.members.length : 0),
-              skillLevel: assigned.skillLevel || level,
-              city: assigned.city || city,
-              venue: assigned.venue || venue,
-              captainId: assigned.captainId || null,
-              captainName: assigned.captainName || null,
-              maxSpots: SOFT_MAX_GROUP,
-              members: assigned.members || [],
-            },
+            circle: circleSummary(assignedCircleDoc.data(), registration.id),
             alreadyJoined: true,
           };
         }
       }
 
-      // Determine if we need to start a brand new circle
-      let needNewCircle = false;
-      if (!circleState || circleState.status === 'locked' || circleState.status === 'closed') {
-        needNewCircle = true;
-      } else {
-        if (shouldStartNewBucket(circleState)) {
-          needNewCircle = true;
-        }
-        const genderViolated = checkGenderCap(
-          { male: circleState.maleCount, female: circleState.femaleCount },
-          registration.gender,
-          registration.allWomenToggle
-        );
-        if (genderViolated) {
+      // Join the partition's active circle unless it is closed, locked, merged, full or at the gender cap
+      let needNewCircle = !circleState || circleState.status !== 'active' || circleState.isLocked;
+      if (!needNewCircle) {
+        if (shouldStartNewBucket(circleState)) needNewCircle = true;
+        if (
+          checkGenderCap(
+            { male: circleState.maleCount, female: circleState.femaleCount },
+            registration.gender,
+            registration.allWomenToggle
+          )
+        ) {
           needNewCircle = true;
         }
       }
 
+      const isNewCircle = needNewCircle;
       if (needNewCircle) {
         circleCounter += 1;
-        activeCircleId = buildCircleId(level, genderPref, circleCounter);
-        circleRef = db.getDocRef('circles', activeCircleId);
-        circleState = {
-          circleId: activeCircleId,
-          name: `${activeCircleId.replace('-', ' ')}`,
-          skillLevel: level,
-          isAllWomen: Boolean(registration.allWomenToggle),
+        circleState = createCircleState({
+          level,
+          genderPref,
+          index: circleCounter,
           city,
           venue,
           eventDate,
-          captainId: null,
-          captainName: null,
-          meetingPoint: 'Near Main Festival Entrance / Information Desk',
-          chatLink: `https://chat.whatsapp.com/demo_${activeCircleId.toLowerCase()}`,
-          members: [],
-          maleCount: 0,
-          femaleCount: 0,
-          otherCount: 0,
-          totalCount: 0,
-          status: 'active',
-          isLocked: false,
-          createdAt: now,
-        };
+          now,
+        });
+        activeCircleId = circleState.circleId;
+        circleRef = db.getDocRef('circles', activeCircleId);
       }
 
-      // Evaluate Circle Captain assignment
-      let isCaptain = false;
+      // Captain: the first opted-in volunteer, otherwise the circle's first member
+      const newMember = toCircleMember(registration, now);
       if (registration.captainOptIn && !circleState.captainId) {
-        isCaptain = true;
+        newMember.isCaptain = true;
         circleState.captainId = registration.id;
         circleState.captainName = registration.name;
       }
-
-      // Add attendee to circle member roster
-      const newMember = {
-        registrationId: registration.id,
-        name: registration.name,
-        gender: registration.gender,
-        ageBand: registration.ageBand,
-        skillLevel: registration.skillLevel,
-        captainOptIn: Boolean(registration.captainOptIn),
-        isCaptain,
-        joinedAt: now,
-      };
-
-      circleState.members.push(newMember);
+      circleState.members = [...(circleState.members || []), newMember];
       circleState.totalCount = circleState.members.length;
-      if (registration.gender === 'male') {
-        circleState.maleCount = (circleState.maleCount || 0) + 1;
-      } else if (registration.gender === 'female') {
-        circleState.femaleCount = (circleState.femaleCount || 0) + 1;
-      } else {
-        circleState.otherCount = (circleState.otherCount || 0) + 1;
-      }
-
-      // Fallback captain assignment
-      if (!circleState.captainId && circleState.members.length > 0) {
+      adjustGenderCount(circleState, registration.gender, 1);
+      if (!circleState.captainId) {
         circleState.captainId = circleState.members[0].registrationId;
         circleState.captainName = circleState.members[0].name;
         circleState.members[0].isCaptain = true;
-        if (circleState.members[0].registrationId === registration.id) {
-          isCaptain = true;
-        }
       }
 
-      // Transaction writes
       transaction.set(circleRef, circleState, { merge: true });
-      transaction.set(groupStateRef, {
-        activeCircleId,
-        lastCircleCounter: circleCounter,
-        updatedAt: now,
-      }, { merge: true });
-
-      registration.circleId = activeCircleId;
+      transaction.set(
+        groupStateRef,
+        {
+          activeCircleId,
+          lastCircleCounter: circleCounter,
+          ...(isNewCircle ? { circleIds: db.FieldValue.arrayUnion(activeCircleId) } : {}),
+          updatedAt: now,
+        },
+        { merge: true }
+      );
       transaction.set(regRef, { circleId: activeCircleId, updatedAt: now }, { merge: true });
 
       return {
         success: true,
         type: 'live',
         circleId: activeCircleId,
-        circle: {
-          id: activeCircleId,
-          circleId: activeCircleId,
-          name: circleState.name,
-          meetingPoint: circleState.meetingPoint,
-          chatLink: circleState.chatLink,
-          isCaptain,
-          totalMembers: circleState.totalCount || (circleState.members ? circleState.members.length : 0),
-          skillLevel: circleState.skillLevel || level,
-          city: circleState.city || city,
-          venue: circleState.venue || venue,
-          captainId: circleState.captainId || null,
-          captainName: circleState.captainName || null,
-          maxSpots: SOFT_MAX_GROUP,
-          members: circleState.members || [],
-        },
+        circle: circleSummary(circleState, registration.id),
         alreadyJoined: false,
       };
     });
   }
 
   // -------------------------------------------------------------------------
-  // 2. ADVANCE REGISTRATION MATCHING (BATCH POOL QUEUE)
+  // 2. ADVANCE REGISTRATION (queue into the matching pool)
   // -------------------------------------------------------------------------
   if (registrationType === 'advance') {
-    // Idempotency: Check if attendee is already in the pending pool (runs BEFORE transaction)
     const poolDocId = db.getPoolDocId(city, venue, level, genderPref, eventDate);
-    const existingPool = (await db.getPendingPool(city, venue, level, genderPref, eventDate)) || [];
-    const alreadyInPool = existingPool.some(
-      (item) => item.registrationId === registration.id
-    );
 
-    if (alreadyInPool) {
+    // Fast idempotency check before opening a transaction
+    const existingPool = (await db.getPendingPool(city, venue, level, genderPref, eventDate)) || [];
+    if (existingPool.some((item) => item.registrationId === registration.id)) {
       return {
         success: true,
         type: 'advance',
@@ -281,17 +197,12 @@ async function joinMatchingBucket(registration) {
       };
     }
 
-    // Wrap the pool read/append/write in a single Firestore transaction
     return await db.runTransaction(async (transaction) => {
       const poolRef = db.getDocRef('pools', poolDocId);
       const poolDoc = await transaction.get(poolRef);
-      const currentPool = poolDoc.exists ? (poolDoc.data().poolArray || []) : [];
+      const currentPool = poolDoc.exists ? poolDoc.data().poolArray || [] : [];
 
-      // Check idempotency inside transaction
-      const inPool = currentPool.some(
-        (item) => item.registrationId === registration.id
-      );
-      if (inPool) {
+      if (currentPool.some((item) => item.registrationId === registration.id)) {
         return {
           success: true,
           type: 'advance',
@@ -301,19 +212,17 @@ async function joinMatchingBucket(registration) {
         };
       }
 
-      const poolItem = {
+      // No phone number in the pool: circles are built from these entries and shared with members
+      currentPool.push({
         registrationId: registration.id,
         name: registration.name,
-        whatsapp: registration.whatsapp,
         gender: registration.gender,
         ageBand: registration.ageBand,
         skillLevel: registration.skillLevel,
         allWomenToggle: Boolean(registration.allWomenToggle),
         captainOptIn: Boolean(registration.captainOptIn),
         joinedPoolAt: now,
-      };
-
-      currentPool.push(poolItem);
+      });
       transaction.set(poolRef, { poolArray: currentPool }, { merge: true });
 
       return {
@@ -333,4 +242,3 @@ module.exports = {
   maskSecret,
   joinMatchingBucket,
 };
-

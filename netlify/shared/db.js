@@ -13,6 +13,7 @@
 const { getApps, initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { OTP_VERIFIED_TTL_MINUTES } = require('./constants');
+const { compositeKey: _compositeKey } = require('./keys');
 
 // ---------------------------------------------------------------------------
 // Firebase Admin Initialization (singleton, survives warm serverless starts)
@@ -37,32 +38,6 @@ const db = getApps().length ? getFirestore() : null;
 // ---------------------------------------------------------------------------
 // Internal Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Converts a multi-word string into a URL/key-safe slug.
- * e.g., "United Way Garba Grounds" → "united_way_garba_grounds"
- *
- * @param {string} str - The string to slugify.
- * @returns {string} Lowercased, underscore-separated slug.
- */
-function _slugify(str) {
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '');
-}
-
-/**
- * Builds a composite Firestore document ID from partition parameters.
- * Used by pools, groupstate, and showups collections.
- *
- * @param  {...string} parts - Key segments (city, venue, level, etc.).
- * @returns {string} Slugified composite key joined by underscores.
- */
-function _compositeKey(...parts) {
-  return parts.map(_slugify).join('_');
-}
 
 /**
  * Returns today's date in IST (UTC+5:30) as a 'YYYY-MM-DD' string.
@@ -131,9 +106,13 @@ function getGroupStateDocId(city, venue, level, genderPref, date) {
 
 /**
  * Exposes composite-key builder for showups collection.
+ *
+ * @param {string} city
+ * @param {string} venue
+ * @param {string} [date] - 'YYYY-MM-DD'; defaults to today's IST date.
  */
-function getShowupDocId(city, venue) {
-  return _compositeKey(city, venue, _todayIST());
+function getShowupDocId(city, venue, date) {
+  return _compositeKey(city, venue, date || _todayIST());
 }
 
 // =========================================================================
@@ -289,6 +268,21 @@ async function getCircleState(circleId) {
 }
 
 /**
+ * Retrieves a circle, following `mergedInto` when it was merged into another circle
+ * (see netlify/shared/advance-circles.js), so old links land on the circle people are in now.
+ *
+ * @param {string} circleId - Circle ID, possibly of a merged circle.
+ * @returns {Promise<Object|null>} The current circle state, or null.
+ */
+async function getCurrentCircleState(circleId) {
+  let circle = await getCircleState(circleId);
+  for (let hops = 0; circle && circle.status === 'merged' && circle.mergedInto && hops < 5; hops++) {
+    circle = await getCircleState(circle.mergedInto);
+  }
+  return circle;
+}
+
+/**
  * Persists the state of a single Circle.
  *
  * @param {string} circleId - Unique circle identifier.
@@ -305,32 +299,30 @@ async function saveCircleState(circleId, stateObject) {
 // =========================================================================
 
 /**
- * Retrieves the attendee check-in / venue showup list for a venue.
- * Automatically uses today's IST date for the document partition key.
+ * Retrieves the attendee check-in / venue showup list for a venue and night.
  *
  * @param {string} city - City name.
  * @param {string} venue - Venue name.
+ * @param {string} [date] - Event date 'YYYY-MM-DD'; defaults to today's IST date.
  * @returns {Promise<Array<Object>>} List of attendee check-in records.
  */
-async function getShowups(city, venue) {
-  const today = _todayIST();
-  const docId = _compositeKey(city, venue, today);
+async function getShowups(city, venue, date) {
+  const docId = getShowupDocId(city, venue, date);
   const doc = await db.collection('showups').doc(docId).get();
   return doc.exists ? (doc.data().showupsArray || []) : [];
 }
 
 /**
- * Persists attendee check-in records for a venue.
- * Automatically uses today's IST date for the document partition key.
+ * Persists attendee check-in records for a venue and night.
  *
  * @param {string} city - City name.
  * @param {string} venue - Venue name.
  * @param {Array<Object>} showupsArray - Array of verified check-in records.
+ * @param {string} [date] - Event date 'YYYY-MM-DD'; defaults to today's IST date.
  * @returns {Promise<Array<Object>>} Stored showups array.
  */
-async function saveShowups(city, venue, showupsArray) {
-  const today = _todayIST();
-  const docId = _compositeKey(city, venue, today);
+async function saveShowups(city, venue, showupsArray, date) {
+  const docId = getShowupDocId(city, venue, date);
   await db.collection('showups').doc(docId).set({ showupsArray }, { merge: true });
   return showupsArray;
 }
@@ -444,6 +436,34 @@ async function getVenues() {
 }
 
 // =========================================================================
+// H. ORGANIZER ACCOUNTS  —  Collection: "organizers", Document ID: venue ID (upper case)
+// =========================================================================
+
+/**
+ * Retrieves a venue organizer account.
+ *
+ * @param {string} venueId - Venue ID, e.g. 'AH-UNIT' (case-insensitive).
+ * @returns {Promise<{venueId: string, city: string, venue: string, passwordHash: string, salt: string, disabled?: boolean}|null>}
+ */
+async function getOrganizer(venueId) {
+  const doc = await db.collection('organizers').doc(String(venueId).trim().toUpperCase()).get();
+  return doc.exists ? doc.data() : null;
+}
+
+/**
+ * Creates or updates a venue organizer account (see scripts/create-organizer.js).
+ *
+ * @param {string} venueId - Venue ID (stored upper case).
+ * @param {Object} data - Account fields.
+ * @returns {Promise<Object>} Stored account.
+ */
+async function saveOrganizer(venueId, data) {
+  const id = String(venueId).trim().toUpperCase();
+  await db.collection('organizers').doc(id).set({ ...data, venueId: id }, { merge: true });
+  return data;
+}
+
+// =========================================================================
 // EXPORTS
 // =========================================================================
 
@@ -464,6 +484,7 @@ module.exports = {
   getGroupState,
   saveGroupState,
   getCircleState,
+  getCurrentCircleState,
   saveCircleState,
   getShowups,
   saveShowups,
@@ -474,5 +495,7 @@ module.exports = {
   getVerifiedStatus,
   saveVerifiedStatus,
   getVenues,
+  getOrganizer,
+  saveOrganizer,
 };
 

@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// SoloSaathi Circle reads and writes Firestore only from the Netlify Functions, through the
+// Firebase Admin SDK (netlify/shared/db.js), which bypasses these rules. Browsers never talk to
+// Firestore directly, so every client request is denied.
+//
+// Deploy with: npx firebase-tools deploy --only firestore:rules,firestore:indexes
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

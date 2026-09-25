@@ -162,7 +162,7 @@ export function RegisterAdvancePage() {
           <Badge color={theme.colors.gold} size="sm">
             💃 Advance Pre-Booking
           </Badge>
-          <span style={{ fontFamily: theme.fonts.mono, fontSize: '11px', color: theme.colors.amber, fontWeight: 700 }}>
+          <span style={{ fontFamily: theme.fonts.mono, fontSize: '11px', color: theme.colors.amberText, fontWeight: 700 }}>
             {confirmedBooking ? 'CONFIRMED' : `STEP ${step + 1} OF 5`}
           </span>
         </div>
@@ -234,7 +234,7 @@ export function RegisterAdvancePage() {
                       fontFamily: theme.fonts.mono,
                       fontWeight: 700,
                       fontSize: '14px',
-                      color: dateIsPeak ? theme.colors.pink : theme.colors.gold,
+                      color: dateIsPeak ? theme.colors.pinkText : theme.colors.goldText,
                     }}
                   >
                     ₹{dateIsPeak ? 249 : 199}
@@ -317,7 +317,7 @@ export function RegisterAdvancePage() {
                 style={{
                   padding: '11px 16px',
                   flexShrink: 0,
-                  color: isPhoneVerified ? theme.colors.liveGreen : theme.colors.amber,
+                  color: isPhoneVerified ? theme.colors.liveGreenText : theme.colors.amberText,
                   borderColor: isPhoneVerified ? theme.colors.liveGreen : theme.colors.amber,
                 }}
               >
@@ -661,10 +661,10 @@ export function RegisterAdvancePage() {
             <div>Booking ID: {confirmedBooking.registrationId}</div>
             <div>Payment Ref: {confirmedBooking.paymentId}</div>
             <div>Skill Level: {confirmedBooking.skillLevel}</div>
-            <div style={{ color: theme.colors.liveGreen }}>Status: Confirmed in Advance Pool</div>
+            <div style={{ color: theme.colors.liveGreenText }}>Status: Confirmed in Advance Pool</div>
           </div>
 
-          <p style={{ fontSize: '12px', color: theme.colors.amber, marginBottom: '24px' }}>
+          <p style={{ fontSize: '12px', color: theme.colors.amberText, marginBottom: '24px' }}>
             🗓️ Circle announcements and chat links unlock 48 hours prior to the festival night. You can review your pass anytime via "Find My Circle".
           </p>
 

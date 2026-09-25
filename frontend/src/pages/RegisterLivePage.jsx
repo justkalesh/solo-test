@@ -130,23 +130,23 @@ export function RegisterLivePage() {
   };
 
   const handlePaymentConfirmed = (paymentResult) => {
-    const circle = paymentResult.matching?.circle || {
-      circleId: paymentResult.matching?.circleId || 'circle_live_01',
-      name: 'TAAL TOLI 1',
-      meetingPoint: 'Near Gate 3 Food Court',
-      skillLevel,
-    };
+    const circle = paymentResult.matching?.circle || null;
 
     const attendeeProfile = {
       name,
       whatsapp,
       registrationId: paymentResult.registrationId,
-      circleId: circle.circleId,
+      circleId: circle?.circleId || null,
     };
 
     setUser(attendeeProfile);
-    setActiveCircle(circle);
-    navigate(`/circle/${circle.circleId}`);
+    if (circle) {
+      setActiveCircle(circle);
+      navigate(`/circle/${circle.circleId}`);
+    } else {
+      // Paid but not placed yet (e.g. the webhook got there first): Find My Circle shows it
+      navigate('/find-circle');
+    }
   };
 
   return (
@@ -165,7 +165,7 @@ export function RegisterLivePage() {
           <Badge color={theme.colors.liveGreen} size="sm">
             ● Live Walk-Up
           </Badge>
-          <span style={{ fontFamily: theme.fonts.mono, fontSize: '11px', color: theme.colors.amber, fontWeight: 700 }}>
+          <span style={{ fontFamily: theme.fonts.mono, fontSize: '11px', color: theme.colors.amberText, fontWeight: 700 }}>
             STEP {step + 1} OF 4
           </span>
         </div>
@@ -258,7 +258,7 @@ export function RegisterLivePage() {
                 style={{
                   padding: '11px 16px',
                   flexShrink: 0,
-                  color: isPhoneVerified ? theme.colors.liveGreen : theme.colors.amber,
+                  color: isPhoneVerified ? theme.colors.liveGreenText : theme.colors.amberText,
                   borderColor: isPhoneVerified ? theme.colors.liveGreen : theme.colors.amber,
                 }}
               >
@@ -553,7 +553,7 @@ export function RegisterLivePage() {
             Complete Registration Pass
           </h2>
           <p style={{ fontSize: '12.5px', color: theme.colors.textMuted, marginBottom: '16px' }}>
-            Confirm your ₹199 circle pass to be instantly placed into your live festival circle.
+            Confirm your circle pass to be instantly placed into your live festival circle.
           </p>
 
           <PaymentStep

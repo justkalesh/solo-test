@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useParams } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
@@ -10,7 +10,6 @@ const RegisterLivePage = lazy(() => import('./pages/RegisterLivePage'));
 const RegisterAdvancePage = lazy(() => import('./pages/RegisterAdvancePage'));
 const FindMyCirclePage = lazy(() => import('./pages/FindMyCirclePage'));
 const CircleActivePage = lazy(() => import('./pages/CircleActivePage'));
-const CircleChatPage = lazy(() => import('./pages/CircleChatPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const OrganizerLoginPage = lazy(() => import('./pages/OrganizerLoginPage'));
 const OrganizerDashboardPage = lazy(() => import('./pages/OrganizerDashboardPage'));
@@ -40,6 +39,15 @@ function SuspenseWrapper({ children }) {
       {children}
     </Suspense>
   );
+}
+
+/**
+ * Group chat is hidden for launch (pages/CircleChatPage.jsx is kept but not routed). Old chat
+ * links open the circle page, which has the circle tools.
+ */
+function ChatRedirect() {
+  const { circleId } = useParams();
+  return <Navigate to={`/circle/${circleId}`} replace />;
 }
 
 /**
@@ -100,14 +108,10 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // 6. Circle Group Chat (Ephemeral chat, chips, 1:00 AM IST auto-close, captain controls)
+      // 6. Circle Group Chat: hidden for launch, redirects to the circle page
       {
         path: 'chat/:circleId',
-        element: (
-          <SuspenseWrapper>
-            <CircleChatPage />
-          </SuspenseWrapper>
-        ),
+        element: <ChatRedirect />,
       },
 
       // 7. Festival Notifications & Day-of Alerts

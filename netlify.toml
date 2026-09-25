@@ -23,6 +23,17 @@
   framework = "#custom"
   timeout = 60
 
+# Scheduled functions. The handlers live in netlify/functions/scheduled/ and are exposed
+# through shims, so their schedules are declared here rather than in the handler files.
+# - auto-finalize: forms advance circles (48h before) and merges small circles (12h before).
+#   Every 15 minutes, so merges happen within 15 minutes of the 12-hour mark.
+# - cleanup-expired: deletes expired OTP and verified-session documents once a day.
+[functions."auto-finalize"]
+  schedule = "*/15 * * * *"
+
+[functions."cleanup-expired"]
+  schedule = "@daily"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

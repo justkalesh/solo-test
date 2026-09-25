@@ -5,7 +5,7 @@
  * Enforces:
  * - Schema validation via validateOtpVerifyPayload.
  * - Anti-fraud 5-attempt hard block (OTP_MAX_VERIFY_ATTEMPTS = 5):
- *   If 5 wrong attempts occur, the code is permanently locked with NO manual override.
+ *   If 5 wrong attempts occur, the code is locked and send-otp refuses a new one for OTP_LOCKOUT_MINUTES.
  *   This is an intentional anti-fraud defense to prevent bad actors from registering on numbers
  *   they do not control and subsequently disputing charges.
  * - TTL verification: OTP must be verified within OTP_EXPIRY_MINUTES (10m).
@@ -15,10 +15,12 @@
 const {
   OTP_MAX_VERIFY_ATTEMPTS,
   OTP_VERIFIED_TTL_MINUTES,
+  OTP_LOCKOUT_MINUTES,
 } = require('../../shared/constants');
 const { successResponse, errorResponse, handleOptions } = require('../../shared/response');
 const { validateOtpVerifyPayload } = require('../../shared/validators');
 const db = require('../../shared/db');
+const { createAttendeeToken } = require('../../shared/session');
 
 /**
  * Normalizes phone input to standard 10 digits.
@@ -81,7 +83,7 @@ exports.handler = async (event, context) => {
     // 3. Check if already hard-blocked
     if (otpRecord.isBlocked) {
       return errorResponse(
-        'This OTP is permanently locked due to 5 failed verification attempts. No manual override is permitted. Please request a new OTP.',
+        'This code is locked after 5 wrong attempts. You can request a new code 15 minutes after the lockout.',
         403,
         { hardBlocked: true }
       );
@@ -101,15 +103,18 @@ exports.handler = async (event, context) => {
       const currentAttempts = (otpRecord.attempts || 0) + 1;
 
       if (currentAttempts >= OTP_MAX_VERIFY_ATTEMPTS) {
-        // Enforce permanent hard block
+        // Lock the number for OTP_LOCKOUT_MINUTES (send-otp refuses until then). expiresAt is
+        // extended so the daily cleanup (scheduled/cleanup-expired) can't delete the lock early.
         await db.saveOtpRecord(phone, {
           ...otpRecord,
           attempts: currentAttempts,
           isBlocked: true,
+          blockedAt: now,
+          expiresAt: Math.max(otpRecord.expiresAt || 0, now + OTP_LOCKOUT_MINUTES * 60 * 1000),
         });
 
         return errorResponse(
-          'Maximum verification attempts (5) exceeded. This OTP is permanently locked. No manual override is permitted to prevent festival ticket fraud.',
+          'Too many wrong codes (5). This code is now locked; you can request a new code in 15 minutes.',
           403,
           {
             hardBlocked: true,
@@ -126,7 +131,7 @@ exports.handler = async (event, context) => {
 
       const attemptsRemaining = OTP_MAX_VERIFY_ATTEMPTS - currentAttempts;
       return errorResponse(
-        `Invalid verification code. ${attemptsRemaining} attempt(s) remaining before permanent lockout.`,
+        `Invalid verification code. ${attemptsRemaining} attempt(s) remaining before a 15-minute lockout.`,
         400,
         { attemptsRemaining }
       );
@@ -149,6 +154,8 @@ exports.handler = async (event, context) => {
       verified: true,
       whatsapp: phone,
       verifiedTtlMinutes: OTP_VERIFIED_TTL_MINUTES,
+      // Signed session for find-my-circle, circle-actions and get-circle (see shared/session.js)
+      sessionToken: createAttendeeToken(phone, now),
       message:
         'Mobile number verified successfully. You have 30 minutes to complete registration without re-verifying.',
     });
